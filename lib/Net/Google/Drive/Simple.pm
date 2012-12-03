@@ -12,6 +12,7 @@ use File::Basename;
 use YAML qw( LoadFile DumpFile );
 use JSON qw( from_json );
 use Log::Log4perl qw(:easy);
+use Data::Dumper;
 
 our $VERSION = "0.01";
 
@@ -50,6 +51,8 @@ sub init {
     }
 
     $cfg = LoadFile $self->{ config_file };
+    $self->{ cfg } = $cfg;
+
     $self->token_refresh( $cfg );
     DumpFile( $self->{ config_file }, $cfg );
 
@@ -65,8 +68,18 @@ sub token_expired {
 ###########################################
     my( $self ) = @_;
 
-    if( $self->{ cfg }->{ token_expires } - 60 < time() ) {
+    my $time_remaining = $self->{ cfg }->{ expires } - time();
+
+    if( $time_remaining < 60 ) {
+
+        if( $time_remaining < 0 ) {
+            INFO "Token expired $time_remaining seconds ago";
+        } else {
+            INFO "Token will expire in $time_remaining seconds";
+        }
+
         INFO "Token needs to be refreshed.";
+
         return 1;
     }
 
@@ -89,20 +102,7 @@ sub files {
     my $url = URI->new( "https://www.googleapis.com/drive/v2/files" );
     $url->query_form( $opts );
 
-    my $req = HTTP::Request->new(
-      GET => $url->as_string,
-      HTTP::Headers->new( Authorization => 
-          "Bearer " . $self->{ cfg }->{ access_token })
-    );
-
-    my $ua = LWP::UserAgent->new();
-    my $resp = $ua->request( $req );
-
-    if( ! $resp->is_success() ) {
-        die $resp->message();
-    }
-
-    my $data = from_json( $resp->content() );
+    my $data = $self->http_json( $url );
     
     my @docs = ();
     
@@ -126,9 +126,72 @@ sub files {
 }
 
 ###########################################
+sub children_by_folder_id {
+###########################################
+    my( $self, $folder_id, $opts) = @_;
+
+    $self->init();
+
+    if( !defined $opts ) {
+        $opts = { 
+            maxResults => 100,
+        };
+    }
+
+    my $url = URI->new( 
+        "https://www.googleapis.com/drive/v2/files/$folder_id/children" );
+
+    $url->query_form( $opts );
+
+    my $data = $self->http_json( $url );
+
+    my @children = ();
+
+    for my $item ( @{ $data->{ items } } ) {
+        my $uri = URI->new( $item->{ childLink } );
+        my $data = $self->http_json( $uri );
+        push @children, $data;
+    }
+
+    return \@children;
+}
+
+###########################################
 sub children {
 ###########################################
-    my( $self, $path ) = @_;
+    my( $self, $path, $opts ) = @_;
+
+    if( !defined $path ) {
+        LOGDIE "No $path given";
+    }
+
+    my @parts = split '/', $path;
+    $parts[0] = "root";
+
+    my $folder_id = shift @parts;
+    my $self_link;
+
+    PART: for my $part ( @parts ) {
+        DEBUG "Looking up part $part (folder_id=$folder_id)";
+        my $children = $self->children_by_folder_id( $folder_id );
+
+        for my $child ( @$children ) {
+            DEBUG "Found child $child->{ title }";
+            if( $child->{ title } eq $part ) {
+                $folder_id = $child->{ id };
+                $self_link = $child->{ self_link };
+                next PART;
+            }
+        }
+
+        LOGDIE "Child $part not found";
+    }
+
+    INFO "Getting content of folder";
+
+    my $children = $self->children_by_folder_id( $folder_id, $opts );
+
+    return $children;
 }
 
 ###########################################
@@ -178,6 +241,29 @@ sub token_refresh {
   return undef;
 }
 
+###########################################
+sub http_json {
+###########################################
+    my( $self, $url ) = @_;
+
+    my $req = HTTP::Request->new(
+      GET => $url->as_string,
+      HTTP::Headers->new( Authorization => 
+          "Bearer " . $self->{ cfg }->{ access_token })
+    );
+
+    my $ua = LWP::UserAgent->new();
+    my $resp = $ua->request( $req );
+
+    if( ! $resp->is_success() ) {
+        die $resp->message();
+    }
+
+    my $data = from_json( $resp->content() );
+
+    return $data;
+}
+    
 1;
 
 __END__

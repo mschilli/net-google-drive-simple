@@ -11,6 +11,7 @@ use HTTP::Request::Common;
 use File::Basename;
 use YAML qw( LoadFile DumpFile );
 use JSON qw( from_json );
+use Test::MockObject;
 use Log::Log4perl qw(:easy);
 use Data::Dumper;
 
@@ -150,7 +151,8 @@ sub children_by_folder_id {
     for my $item ( @{ $data->{ items } } ) {
         my $uri = URI->new( $item->{ childLink } );
         my $data = $self->http_json( $uri );
-        push @children, $data;
+        push @children, 
+          $self->data_factory( $data );
     }
 
     return \@children;
@@ -176,10 +178,10 @@ sub children {
         my $children = $self->children_by_folder_id( $folder_id );
 
         for my $child ( @$children ) {
-            DEBUG "Found child $child->{ title }";
-            if( $child->{ title } eq $part ) {
-                $folder_id = $child->{ id };
-                $self_link = $child->{ self_link };
+            DEBUG "Found child ", $child->title();
+            if( $child->title() eq $part ) {
+                $folder_id = $child->id();
+                $self_link = $child->selfLink();
                 next PART;
             }
         }
@@ -195,15 +197,18 @@ sub children {
 }
 
 ###########################################
-sub json_factory {
+sub data_factory {
 ###########################################
-    my( $self, $class, $json ) = @_;
+    my( $self, $data ) = @_;
 
-      # Transform JSON data into an object of the specified class, providing
-      # accessors for all fields set
-    my $json_data = from_json( $json );
+    my $mock = Test::MockObject->new();
 
-    bless $json_data, $class;
+    for my $key ( keys %$data ) {
+        INFO "Adding method $key";
+        $mock->mock( $key , sub { $data->{ $key } } );
+    }
+
+    return $mock;
 }
 
 ###########################################
@@ -276,13 +281,17 @@ Net::Google::Drive::Simple - Simple modification of Google Drive data
 
     use Net::Google::Drive::Simple;
 
+      # requires a ~/.google-drive.yml file with an access token, 
+      # see description below.
     my $gd = Net::Google::Drive::Simple->new();
 
-    my $children = $gd->children( "/top/books" );
+    my $children = $gd->children( "/folder/path" );
 
     for my $child ( @$children ) {
 
         next if $child->kind() ne 'drive#file';
+
+        next if !$child->can( "downloadUrl" );
 
         print $child->originalFilename(), 
               " can be downloaded at ",
@@ -295,6 +304,20 @@ Net::Google::Drive::Simple - Simple modification of Google Drive data
 Net::Google::Drive::Simple authenticates with a user's Google Drive and
 offers several convenience methods to list, retrieve, and modify the data
 stored in the cloud.
+
+To get the access token required to access your Google Drive data via 
+this module, you need to run the script C<eg/google-drive-init> in this
+distribution.
+This script starts a web server on port 8082 on your local machine.
+When you point your browser at http://localhost:8082, you'll see a link
+that will lead you to Google Drive's login page, where you authenticate and 
+then allow the app (specified by client_id and client_secret below) access to 
+your Google Drive data. The script will then receive an access token
+from Google Drive and store it in ~/.google-drive.yml from where
+other scripts can pick it up and work on the data stored on the user's
+Google Drive account.
+Note that you need to obtain client_id and a client_secret below from
+https://developers.google.com/drive before you can use this script.
 
 =head1 LEGALESE
 

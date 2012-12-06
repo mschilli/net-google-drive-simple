@@ -7,16 +7,34 @@ use strict;
 
 use Test::More;
 
-plan tests => 1;
+plan tests => 2;
 
 use Net::Google::Drive::Simple;
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init($DEBUG);
+
+# Log::Log4perl->easy_init($DEBUG);
 
 my $gd = Net::Google::Drive::Simple->new();
 
-my $files = $gd->children( "/top/books-chunks", { maxResults => 3 } );
+ok 1, "loaded ok";
 
-for my $file ( @$files ) {
-    print "$file->{ title }\n";
+SKIP: {
+    if( !$ENV{ LIVE_TEST } ) {
+        skip "LIVE_TEST not set, skipping live tests", 1;
+    }
+
+    my $files = $gd->children( "/", 
+        { maxResults => 3 } 
+    );
+
+    ok $files, "children returned ok";
+
+    for my $file ( @$files ) {
+    
+        next if $file->kind() ne 'drive#file';
+    
+        next if !$file->can( "downloadUrl" );
+    
+        print $file->downloadUrl(), "\n";
+    }
 }

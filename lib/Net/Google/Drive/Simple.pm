@@ -305,6 +305,8 @@ Net::Google::Drive::Simple authenticates with a user's Google Drive and
 offers several convenience methods to list, retrieve, and modify the data
 stored in the cloud.
 
+=head2 GETTING STARTED
+
 To get the access token required to access your Google Drive data via 
 this module, you need to run the script C<eg/google-drive-init> in this
 distribution.
@@ -318,6 +320,57 @@ other scripts can pick it up and work on the data stored on the user's
 Google Drive account.
 Note that you need to obtain client_id and a client_secret below from
 https://developers.google.com/drive before you can use this script.
+
+=head1 METHODS
+
+=over 4
+
+=item C<new()>
+
+Constructor, creates a helper object to retrieve Google Drive data
+later. Takes an optional name of the C<.google-drive.yml> file
+
+    my $gd = Net::Google::Drive::Simple->new(
+        config_file => "gd.yml",
+    );
+
+or uses C<~/.google-drive.yml> in the user's home directory as default.
+
+=item C<my $children = $gd-$<gt>children( "/path/to" )>
+
+Return the entries under a given path on the Google Drive as a reference
+to an array. Each entry 
+is an object composed of the JSON data returned by the Google Drive API.
+Each object offers methods named like the fields in the JSON data, e.g.
+C<originalFilename()>, C<downloadUrl>, etc.
+
+Will return all entries found unless C<maxResults> is set:
+
+    my $children = $gd->children( "/path/to", { maxResults => 3 } )
+
+=item C<my $files = $gd-$<gt>files( )>
+
+Return all files on the drive as a reference to an array.
+Will return all entries found unless C<maxResults> is set:
+
+    my $files = $gd->files( "/path/to", { maxResults => 3 } )
+
+Note that Google limits the number of entries returned by default to
+100, and seems to restrict the maximum number of files returned
+by a single query to 3,500, even if you specify higher values for
+C<maxResults>.
+
+=back
+
+=head1 LOGGING/DEBUGGING
+
+Net::Google::Drive::Simple is Log4perl-enabled.
+To find out what's going on under the hood, turn on Log4perl:
+
+    use Log::Log4perl qw(:easy);
+    Log::Log4perl->easy_init($DEBUG);
+
+=back
 
 =head1 LEGALESE
 

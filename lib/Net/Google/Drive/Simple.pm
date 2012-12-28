@@ -8,9 +8,10 @@ use LWP::UserAgent;
 use HTTP::Request;
 use HTTP::Headers;
 use HTTP::Request::Common;
+use Sysadm::Install qw( :all );
 use File::Basename;
 use YAML qw( LoadFile DumpFile );
-use JSON qw( from_json );
+use JSON qw( from_json to_json );
 use Test::MockObject;
 use Log::Log4perl qw(:easy);
 use Data::Dumper;
@@ -24,6 +25,8 @@ sub new {
 
     my $self = {
         config_file => undef,
+        api_file_url    => "https://www.googleapis.com/drive/v2/files",
+        api_upload_url  => "https://www.googleapis.com/upload/drive/v2/files",
         %options,
     };
 
@@ -56,7 +59,6 @@ sub init {
 
     $self->token_refresh( $cfg );
     DumpFile( $self->{ config_file }, $cfg );
-
     $self->{ cfg } = $cfg;
 
     $self->{ init_done } = 1;
@@ -71,7 +73,7 @@ sub token_expired {
 
     my $time_remaining = $self->{ cfg }->{ expires } - time();
 
-    if( $time_remaining < 60 ) {
+    if( $time_remaining < 300 ) {
 
         if( $time_remaining < 0 ) {
             INFO "Token expired $time_remaining seconds ago";
@@ -96,42 +98,118 @@ sub files {
 
     if( !defined $opts ) {
         $opts = { 
-            maxResults => 2,
+            maxResults => 3000,
         };
     }
 
-    my $url = URI->new( "https://www.googleapis.com/drive/v2/files" );
-    $url->query_form( $opts );
-
-    my $data = $self->http_json( $url );
-    
     my @docs = ();
+        
+    while( 1 ) {
+        my $url = URI->new( $self->{ api_file_url } );
+        $url->query_form( $opts );
+
+        my $data = $self->http_json( $url );
     
-    for my $item ( @{ $data->{ items } } ) {
-    
-        # ignore trash
-      next if $item->{ labels }->{ trashed };
-    
-      if( $item->{ kind } eq "drive#file" ) {
-        my $file = $item->{ originalFilename };
-        next if !defined $file; 
-    
-          # ignore non-pdf
-        next if $file !~ /\.pdf$/i;
-    
-        push @docs, $file;
-      }
+        for my $item ( @{ $data->{ items } } ) {
+        
+            # ignore trash
+          next if $item->{ labels }->{ trashed };
+        
+          if( $item->{ kind } eq "drive#file" ) {
+            my $file = $item->{ originalFilename };
+            next if !defined $file; 
+        
+              # ignore non-pdf
+            next if $file !~ /\.pdf$/i;
+        
+            push @docs, $file;
+          }
+        }
+
+        if( $data->{ nextPageToken } ) {
+            $opts->{ pageToken } = $data->{ nextPageToken };
+        } else {
+            last;
+        }
     }
 
     return \@docs;
 }
 
 ###########################################
+sub folder_create {
+###########################################
+    my( $self, $title, $parent ) = @_;
+
+    my $url = URI->new( $self->{ api_file_url } );
+
+    my $data = $self->http_json( $url, {
+        title    => $title,
+        parents  => [ { id => $parent } ],
+        mimeType => "application/vnd.google-apps.folder",
+    } );
+
+    return $data->{ id };
+}
+
+###########################################
+sub file_upload {
+###########################################
+    my( $self, $file, $parent_id, $file_id ) = @_;
+
+    my $title = basename $file;
+
+      # First, insert the file placeholder, according to
+      # http://stackoverflow.com/questions/10317638
+    my $pdf_data = slurp $file;
+
+    my $url;
+
+    if( ! defined $file_id ) {
+        $url = URI->new( $self->{ api_file_url } );
+
+        my $data = $self->http_json( $url, 
+            { mimeType => "application/pdf",
+              parents  => [ { id => $parent_id } ],
+              title    => $title,
+            }
+        );
+
+        $file_id = $data->{ id };
+    }
+
+    $url = URI->new( $self->{ api_upload_url } . "/$file_id" );
+    $url->query_form( uploadType => "media" );
+
+    my $req = &HTTP::Request::Common::PUT(
+        $url->as_string,
+        Authorization  => "Bearer " . $self->{ cfg }->{ access_token },
+        "Content-Type" => "application/pdf",
+        Content        => $pdf_data,
+    );
+
+    my $resp = $self->http_loop( $req );
+
+    DEBUG $resp->as_string;
+
+    return $file_id;
+}
+
+###########################################
 sub children_by_folder_id {
 ###########################################
-    my( $self, $folder_id, $opts) = @_;
+    my( $self, $folder_id, $opts, $search_opts ) = @_;
 
     $self->init();
+
+    if( !defined $search_opts ) {
+        $search_opts = {};
+    }
+
+    $search_opts = {
+        page => 1,
+        %$search_opts,
+    };
 
     if( !defined $opts ) {
         $opts = { 
@@ -139,48 +217,70 @@ sub children_by_folder_id {
         };
     }
 
-    my $url = URI->new( 
-        "https://www.googleapis.com/drive/v2/files/$folder_id/children" );
+    my $url = URI->new( $self->{ api_file_url } );
+    $opts->{ q } = "'$folder_id' in parents";
 
-    $url->query_form( $opts );
-
-    my $data = $self->http_json( $url );
-
-    my @children = ();
-
-    for my $item ( @{ $data->{ items } } ) {
-        my $uri = URI->new( $item->{ childLink } );
-        my $data = $self->http_json( $uri );
-        push @children, 
-          $self->data_factory( $data );
+    if( $search_opts->{ title } ) {
+        $opts->{ q } .= " AND title = '$search_opts->{ title }'";
     }
 
+    my @children = ();
+    
+    while( 1 ) {
+        $url->query_form( $opts );
+
+        my $data = $self->http_json( $url );
+
+        for my $item ( @{ $data->{ items } } ) {
+            push @children, $self->data_factory( $item );
+        }
+
+        if( $search_opts->{ page } and $data->{ nextPageToken } ) {
+            $opts->{ pageToken } = $data->{ nextPageToken };
+        } else {
+            last;
+        }
+    }
+    
     return \@children;
 }
 
 ###########################################
 sub children {
 ###########################################
-    my( $self, $path, $opts ) = @_;
+    my( $self, $path, $opts, $search_opts ) = @_;
 
     if( !defined $path ) {
         LOGDIE "No $path given";
     }
 
+    if( !defined $search_opts ) {
+        $search_opts = {};
+    }
+
     my @parts = split '/', $path;
-    $parts[0] = "root";
+    my $parent = $parts[0] = "root";
+    DEBUG "Parent: $parent";
 
     my $folder_id = shift @parts;
     my $self_link;
 
     PART: for my $part ( @parts ) {
+
         DEBUG "Looking up part $part (folder_id=$folder_id)";
-        my $children = $self->children_by_folder_id( $folder_id );
+
+        my $children = $self->children_by_folder_id( $folder_id, 
+          { maxResults    => 100, # path resolution maxResults is different
+          },
+          { %$search_opts, title => $part },
+        );
 
         for my $child ( @$children ) {
             DEBUG "Found child ", $child->title();
             if( $child->title() eq $part ) {
                 $folder_id = $child->id();
+                $parent = $folder_id;
+                DEBUG "Parent: $parent";
                 $self_link = $child->selfLink();
                 next PART;
             }
@@ -189,11 +289,12 @@ sub children {
         LOGDIE "Child $part not found";
     }
 
-    INFO "Getting content of folder";
+    DEBUG "Getting content of folder";
 
-    my $children = $self->children_by_folder_id( $folder_id, $opts );
+    my $children = $self->children_by_folder_id( $folder_id, $opts, 
+        $search_opts );
 
-    return $children;
+    return( $children, $parent );
 }
 
 ###########################################
@@ -204,7 +305,7 @@ sub data_factory {
     my $mock = Test::MockObject->new();
 
     for my $key ( keys %$data ) {
-        INFO "Adding method $key";
+        # DEBUG "Adding method $key";
         $mock->mock( $key , sub { $data->{ $key } } );
     }
 
@@ -230,8 +331,7 @@ sub token_refresh {
     ]
   );
 
-  my $ua = LWP::UserAgent->new();
-  my $resp = $ua->request($req);
+  my $resp = $self->http_loop( $req, 1 );
 
   if ( $resp->is_success() ) {
     my $data = from_json( $resp->content() );
@@ -242,27 +342,73 @@ sub token_refresh {
     return 1;
   }
 
-  INFO $resp->status_line();
+  DEBUG $resp->status_line();
   return undef;
+}
+
+###########################################
+sub http_loop {
+###########################################
+    my( $self, $req, $noinit ) = @_;
+
+    my $ua = LWP::UserAgent->new();
+    my $resp;
+
+    my $RETRIES        = 3;
+    my $SLEEP_INTERVAL = 10;
+
+    {
+        DEBUG "Fetching ", $req->url->as_string;
+
+          # refresh token if necessary
+        if( ! $noinit ) {
+            $self->init();
+        }
+
+        $resp = $ua->request( $req );
+
+        if( ! $resp->is_success() ) {
+            warn "Failed with ", $resp->code(), ": ", $resp->message();
+            if( --$RETRIES >= 0 ) {
+                ERROR "Retrying in $SLEEP_INTERVAL seconds";
+                sleep $SLEEP_INTERVAL;
+                redo;
+            } else {
+                die "Out of retries.";
+            }
+        }
+
+        DEBUG "Successfully fetched ", length( $resp->content() ), " bytes.";
+    }
+
+    return $resp;
 }
 
 ###########################################
 sub http_json {
 ###########################################
-    my( $self, $url ) = @_;
+    my( $self, $url, $post_data ) = @_;
 
-    my $req = HTTP::Request->new(
-      GET => $url->as_string,
-      HTTP::Headers->new( Authorization => 
-          "Bearer " . $self->{ cfg }->{ access_token })
-    );
+    my $req;
 
-    my $ua = LWP::UserAgent->new();
-    my $resp = $ua->request( $req );
-
-    if( ! $resp->is_success() ) {
-        die $resp->message();
+    if( $post_data ) {
+        $req = &HTTP::Request::Common::POST(
+            $url->as_string,
+            Authorization => "Bearer " . $self->{ cfg }->{ access_token },
+            "Content-Type"=> "application/json",
+            Content       => to_json( $post_data ),
+        );
+    } else {
+      $req = HTTP::Request->new(
+        GET => $url->as_string,
+        HTTP::Headers->new( Authorization => 
+            "Bearer " . $self->{ cfg }->{ access_token })
+      );
     }
+
+    DEBUG "Fetching ", $req->as_string();
+
+    my $resp = $self->http_loop( $req );
 
     my $data = from_json( $resp->content() );
 

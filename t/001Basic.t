@@ -23,18 +23,9 @@ SKIP: {
         skip "LIVE_TEST not set, skipping live tests", 1;
     }
 
-    my $files = $gd->children( "/", 
-        { maxResults => 3 } 
+    my( $files, $parent ) = $gd->children( "/", 
+        { maxResults => 3 }, { page => 0 },
     );
 
     ok $files, "children returned ok";
-
-    for my $file ( @$files ) {
-    
-        next if $file->kind() ne 'drive#file';
-    
-        next if !$file->can( "downloadUrl" );
-    
-        print $file->downloadUrl(), "\n";
-    }
 }

@@ -263,7 +263,6 @@ sub children {
     DEBUG "Parent: $parent";
 
     my $folder_id = shift @parts;
-    my $self_link;
 
     PART: for my $part ( @parts ) {
 
@@ -281,7 +280,6 @@ sub children {
                 $folder_id = $child->id();
                 $parent = $folder_id;
                 DEBUG "Parent: $parent";
-                $self_link = $child->selfLink();
                 next PART;
             }
         }
@@ -449,23 +447,39 @@ Net::Google::Drive::Simple - Simple modification of Google Drive data
 
 Net::Google::Drive::Simple authenticates with a user's Google Drive and
 offers several convenience methods to list, retrieve, and modify the data
-stored in the cloud.
+stored in the 'cloud'. See C<eg/google-drive-upsync> as an example on how
+to keep a local directory in sync with a remote directory on Google Drive.
 
 =head2 GETTING STARTED
 
 To get the access token required to access your Google Drive data via 
 this module, you need to run the script C<eg/google-drive-init> in this
 distribution.
-This script starts a web server on port 8082 on your local machine.
-When you point your browser at http://localhost:8082, you'll see a link
-that will lead you to Google Drive's login page, where you authenticate and 
-then allow the app (specified by client_id and client_secret below) access to 
-your Google Drive data. The script will then receive an access token
-from Google Drive and store it in ~/.google-drive.yml from where
-other scripts can pick it up and work on the data stored on the user's
-Google Drive account.
-Note that you need to obtain client_id and a client_secret below from
-https://developers.google.com/drive before you can use this script.
+
+Before you run it, you need to register your 'app' with Google Drive
+and obtain a client_id and a client_secret from
+
+    https://developers.google.com/drive
+
+Then, replace the following lines in C<eg/google-drive-init> with the
+values received:
+
+      # You need to obtain a client_id and a client_secret from
+      # https://developers.google.com/drive to use this.
+    my $client_id     = "XXX";
+    my $client_secret = "YYY";
+
+Then run the script. It'll start a web server on port 8082 on your local
+machine.  When you point your browser at http://localhost:8082, you'll see a
+link that will lead you to Google Drive's login page, where you authenticate
+and then allow the app (specified by client_id and client_secret above) access
+to your Google Drive data. The script will then receive an access token from
+Google Drive and store it in ~/.google-drive.yml from where other scripts can
+pick it up and work on the data stored on the user's Google Drive account. Make
+sure to limit access to ~/.google-drive.yml, because it contains the access
+token that allows everyone to manipulate your Google Drive data. It also
+contains a refresh token that this library uses to get a new access token
+transparently when the old one is about to expire.
 
 =head1 METHODS
 
@@ -482,7 +496,7 @@ later. Takes an optional name of the C<.google-drive.yml> file
 
 or uses C<~/.google-drive.yml> in the user's home directory as default.
 
-=item C<my $children = $gd-$<gt>children( "/path/to" )>
+=item C<my $children = $gd-E<gt>children( "/path/to" )>
 
 Return the entries under a given path on the Google Drive as a reference
 to an array. Each entry 
@@ -494,7 +508,31 @@ Will return all entries found unless C<maxResults> is set:
 
     my $children = $gd->children( "/path/to", { maxResults => 3 } )
 
-=item C<my $files = $gd-$<gt>files( )>
+Due to the somewhat capricious ways Google Drive handles its directory
+structures, the method needs to traverse the path component by component
+and determine the ID of each directory to get to the next level. To speed
+up subsequent lookups, it also returns the ID of the last component to the
+caller:
+
+    my( $children, $parent ) = $gd->children( "/path/to" );
+
+If the caller now wants to e.g. insert a file into the directory, its 
+ID is available in $parent.
+
+Each child comes back as a files#resource type and gets mapped into
+an object that offers access to the various fields via methods:
+
+    for my $child ( @$children ) {
+        print $child->kind(), " ", $child->title(), "\n";
+    }
+
+Please refer to 
+
+    https://developers.google.com/drive/v2/reference/files#resource
+
+for details on which fields are available.
+
+=item C<my $files = $gd-E<gt>files( )>
 
 Return all files on the drive as a reference to an array.
 Will return all entries found unless C<maxResults> is set:
@@ -506,6 +544,24 @@ Note that Google limits the number of entries returned by default to
 by a single query to 3,500, even if you specify higher values for
 C<maxResults>.
 
+Each file comes back as an object that offers access to the Google
+Drive item's fields, according to the API (see C<children()>).
+
+=item C<my $id = $gd-E<gt>folder_create( "folder-name", $parent_id )>
+
+Create a new folder as a child of the folder with the id C<$parent_id>.
+Returns the ID of the new folder or undef in case of an error.
+
+=item C<$gd-E<gt>file_upload( $file, $dir_id )>
+
+Uploads the content of the file C<$file> into the directory with the ID
+$dir_id on Google Drive. Uses C<$file> as the file name. 
+
+To overwrite an existing file on Google Drive, specify the file's ID as
+an optional parameter:
+
+    $gd->file_upload( $file, $dir_id, $file_id );
+
 =back
 
 =head1 LOGGING/DEBUGGING
@@ -515,8 +571,6 @@ To find out what's going on under the hood, turn on Log4perl:
 
     use Log::Log4perl qw(:easy);
     Log::Log4perl->easy_init($DEBUG);
-
-=back
 
 =head1 LEGALESE
 

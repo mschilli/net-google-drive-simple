@@ -315,6 +315,8 @@ sub token_refresh {
 ###########################################
   my( $self, $cfg ) = @_;
 
+  DEBUG "Refreshing access token";
+
   my $req = &HTTP::Request::Common::POST(
     'https://accounts.google.com/o' .
     '/oauth2/token',
@@ -337,6 +339,7 @@ sub token_refresh {
       $data->{ access_token };
     $cfg->{ expires } = 
       time() + $data->{ expires_in };
+    DEBUG "Token refreshed, will expire in $data->{ expires_in } seconds";
     return 1;
   }
 

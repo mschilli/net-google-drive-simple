@@ -27,7 +27,7 @@ $log_level = $DEBUG if $opts{ v };
 
 Log::Log4perl->easy_init( { 
     level => $log_level, 
-    layout => "%F{1}:%L> %m%n"
+    layout => "%d %F{1}:%L> %m%n"
 } );
 
 my %files_local = ();

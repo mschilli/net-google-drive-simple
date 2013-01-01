@@ -16,7 +16,7 @@ use Test::MockObject;
 use Log::Log4perl qw(:easy);
 use Data::Dumper;
 
-our $VERSION = "0.01";
+our $VERSION = "0.02";
 
 ###########################################
 sub new {
@@ -292,7 +292,11 @@ sub children {
     my $children = $self->children_by_folder_id( $folder_id, $opts, 
         $search_opts );
 
-    return( $children, $parent );
+    if( wantarray ) {
+        return( $children, $parent );
+    } else {
+        return $children;
+    }
 }
 
 ###########################################

@@ -7,7 +7,7 @@ use strict;
 
 use Test::More;
 
-plan tests => 2;
+plan tests => 3;
 
 use Net::Google::Drive::Simple;
 use Log::Log4perl qw(:easy);
@@ -28,4 +28,10 @@ SKIP: {
     );
 
     ok $files, "children returned ok";
+
+    $files = $gd->children( "/", 
+        { maxResults => 3 }, { page => 0 },
+    );
+
+    is ref($files), "ARRAY", "scalar context children";
 }

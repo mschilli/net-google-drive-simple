@@ -1,5 +1,8 @@
 ######################################################################
 Revision history for Perl extension Net::Google::Drive::Simple
 
+0.02 (2012/12/30)
+    (ms) children() now works correctly in both scalar and array context
+
 0.01 (2012/12/28)
     (ms) Where it all began.

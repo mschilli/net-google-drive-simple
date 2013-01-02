@@ -7,3 +7,4 @@ CVS
 .git
 MANIFEST.bak
 adm/release
+.gz$

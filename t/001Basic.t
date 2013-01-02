@@ -27,7 +27,7 @@ SKIP: {
         { maxResults => 3 }, { page => 0 },
     );
 
-    ok $files, "children returned ok";
+    is ref($files), "ARRAY", "children returned ok";
 
     $files = $gd->children( "/", 
         { maxResults => 3 }, { page => 0 },

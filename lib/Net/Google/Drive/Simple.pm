@@ -25,6 +25,7 @@ sub new {
 
     my $self = {
         config_file => undef,
+        cfg         => undef,
         api_file_url    => "https://www.googleapis.com/drive/v2/files",
         api_upload_url  => "https://www.googleapis.com/upload/drive/v2/files",
         %options,
@@ -76,7 +77,7 @@ sub token_expired {
     if( $time_remaining < 300 ) {
 
         if( $time_remaining < 0 ) {
-            INFO "Token expired $time_remaining seconds ago";
+            INFO "Token expired ", -$time_remaining, " seconds ago";
         } else {
             INFO "Token will expire in $time_remaining seconds";
         }
@@ -347,7 +348,7 @@ sub token_refresh {
     return 1;
   }
 
-  DEBUG $resp->status_line();
+  ERROR "Token refresh failed: ", $resp->status_line();
   return undef;
 }
 

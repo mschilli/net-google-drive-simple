@@ -74,6 +74,15 @@ sub init {
 }
 
 ###########################################
+sub token_expire {
+###########################################
+    my( $self ) = @_;
+
+      # expire the token
+    $self->{ cfg }->{ expires } = time() - 1;
+}
+
+###########################################
 sub token_expired {
 ###########################################
     my( $self ) = @_;
@@ -205,6 +214,11 @@ sub folder_create {
 sub file_upload {
 ###########################################
     my( $self, $file, $parent_id, $file_id ) = @_;
+
+      # Since a file upload can take a long time, refresh the token
+      # just in case.
+    $self->token_expire();
+    $self->init();
 
     my $title = basename $file;
 

@@ -59,6 +59,12 @@ sub init {
     $self->{ cfg } = $cfg;
 
     $self->token_refresh( $cfg );
+
+    DEBUG "Testing API with refreshed token";
+    if( !$self->api_test() ) {
+        LOGDIE "api_test failed after token refresh";
+    }
+
     DumpFile( $self->{ config_file }, $cfg );
     $self->{ cfg } = $cfg;
 
@@ -409,11 +415,6 @@ sub http_loop {
           # refresh token if necessary
         if( ! $noinit ) {
             $self->init();
-
-            DEBUG "Testing API with refreshed token";
-            if( !$self->api_test() ) {
-                LOGDIE "api_test failed after token refresh";
-            }
         }
 
         DEBUG "Fetching ", $req->url->as_string;

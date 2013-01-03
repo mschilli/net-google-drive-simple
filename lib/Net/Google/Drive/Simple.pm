@@ -545,7 +545,7 @@ for details on which fields are available.
 Return all files on the drive as a reference to an array.
 Will return all entries found unless C<maxResults> is set:
 
-    my $files = $gd->files( "/path/to", { maxResults => 3 } )
+    my $files = $gd->files( { maxResults => 3 } )
 
 Note that Google limits the number of entries returned by default to
 100, and seems to restrict the maximum number of files returned

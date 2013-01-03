@@ -20,7 +20,7 @@ ok 1, "loaded ok";
 
 SKIP: {
     if( !$ENV{ LIVE_TEST } ) {
-        skip "LIVE_TEST not set, skipping live tests", 1;
+        skip "LIVE_TEST not set, skipping live tests", 2;
     }
 
     my( $files, $parent ) = $gd->children( "/", 

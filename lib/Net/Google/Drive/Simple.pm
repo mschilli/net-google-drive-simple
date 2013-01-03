@@ -16,7 +16,7 @@ use Test::MockObject;
 use Log::Log4perl qw(:easy);
 use Data::Dumper;
 
-our $VERSION = "0.02";
+our $VERSION = "0.03";
 
 ###########################################
 sub new {
@@ -91,24 +91,60 @@ sub token_expired {
 }
 
 ###########################################
+sub api_test {
+###########################################
+    my( $self ) = @_;
+
+    my $url = $self->file_url( { maxResults => 1 } );
+
+    my $ua = LWP::UserAgent->new();
+
+    my $req = HTTP::Request->new(
+        GET => $url->as_string,
+        HTTP::Headers->new( Authorization => 
+            "Bearer " . $self->{ cfg }->{ access_token })
+    );
+
+    DEBUG "Fetching $url";
+
+    my $resp = $ua->request( $req );
+
+    return $resp->is_success();
+}
+
+###########################################
+sub file_url {
+###########################################
+    my( $self, $opts ) = @_;
+
+    $opts = {} if !defined $opts;
+
+    my $default_opts = {
+        maxResults => 3000,
+    };
+
+    $opts = {
+        %$default_opts,
+        %$opts,
+    };
+
+    my $url = URI->new( $self->{ api_file_url } );
+    $url->query_form( $opts );
+    
+    return $url;
+}
+
+###########################################
 sub files {
 ###########################################
     my( $self, $opts ) = @_;
 
     $self->init();
 
-    if( !defined $opts ) {
-        $opts = { 
-            maxResults => 3000,
-        };
-    }
-
     my @docs = ();
         
     while( 1 ) {
-        my $url = URI->new( $self->{ api_file_url } );
-        $url->query_form( $opts );
-
+        my $url = $self->file_url( $opts );
         my $data = $self->http_json( $url );
     
         for my $item ( @{ $data->{ items } } ) {
@@ -369,6 +405,11 @@ sub http_loop {
           # refresh token if necessary
         if( ! $noinit ) {
             $self->init();
+
+            DEBUG "Testing API with refreshed token";
+            if( !$self->api_test() ) {
+                LOGDIE "api_test failed after token refresh";
+            }
         }
 
         $resp = $ua->request( $req );

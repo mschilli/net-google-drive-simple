@@ -406,8 +406,6 @@ sub http_loop {
     my $SLEEP_INTERVAL = 10;
 
     {
-        DEBUG "Fetching ", $req->url->as_string;
-
           # refresh token if necessary
         if( ! $noinit ) {
             $self->init();
@@ -417,6 +415,8 @@ sub http_loop {
                 LOGDIE "api_test failed after token refresh";
             }
         }
+
+        DEBUG "Fetching ", $req->url->as_string;
 
         $resp = $ua->request( $req );
 

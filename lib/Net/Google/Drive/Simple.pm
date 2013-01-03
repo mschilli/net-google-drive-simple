@@ -109,7 +109,13 @@ sub api_test {
 
     my $resp = $ua->request( $req );
 
-    return $resp->is_success();
+    if( $resp->is_success() ) {
+        DEBUG "API tested OK";
+        return 1;
+    }
+
+    ERROR "API error: ", $resp->message();
+    return 0;
 }
 
 ###########################################

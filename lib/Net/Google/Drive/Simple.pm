@@ -527,7 +527,8 @@ this module, you need to run the script C<eg/google-drive-init> in this
 distribution.
 
 Before you run it, you need to register your 'app' with Google Drive
-and obtain a client_id and a client_secret from
+and obtain a client_id and a client_secret from (make sure to register a
+an "installed application" and not a "web application"):
 
     https://developers.google.com/drive
 

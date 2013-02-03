@@ -12,7 +12,7 @@ plan tests => 4;
 use Net::Google::Drive::Simple;
 use Log::Log4perl qw(:easy);
 
-Log::Log4perl->easy_init( { level => $DEBUG, layout => "%F{1}:%L> %m%n" } );
+# Log::Log4perl->easy_init( { level => $DEBUG, layout => "%F{1}:%L> %m%n" } );
 
 my $gd = Net::Google::Drive::Simple->new();
 
@@ -20,7 +20,7 @@ ok 1, "loaded ok";
 
 SKIP: {
     if( !$ENV{ LIVE_TEST } ) {
-        skip "LIVE_TEST not set, skipping live tests", 2;
+        skip "LIVE_TEST not set, skipping live tests", 3;
     }
 
     my( $files, $parent ) = $gd->children( "/", 

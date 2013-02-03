@@ -25,6 +25,7 @@ WriteMakefile(
       'Log::Log4perl'    => 1,
       'Mojolicious'      => 1.16,
       'Pod::Usage'       => 1.36,
+      'File::MMagic'     => 1.29,
     }, # e.g., Module::Name => 1.1
     EXE_FILES           => ["eg/google-drive-init"],
     $ExtUtils::MakeMaker::VERSION >= 6.50 ? (%$meta_merge) : (),

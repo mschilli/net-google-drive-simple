@@ -15,6 +15,7 @@ use JSON qw( from_json to_json );
 use Test::MockObject;
 use Log::Log4perl qw(:easy);
 use Data::Dumper;
+use File::MMagic;
 
 our $VERSION = "0.03";
 
@@ -158,7 +159,19 @@ sub file_url {
 ###########################################
 sub files {
 ###########################################
-    my( $self, $opts ) = @_;
+    my( $self, $opts, $search_opts ) = @_;
+
+    if( !defined $search_opts ) {
+        $search_opts = {};
+    }
+    $search_opts = {
+        page => 1,
+        %$search_opts,
+    };
+
+    if( !defined $opts ) {
+        $opts = {};
+    }
 
     $self->init();
 
@@ -171,20 +184,24 @@ sub files {
         for my $item ( @{ $data->{ items } } ) {
         
             # ignore trash
-          next if $item->{ labels }->{ trashed };
+          if( $item->{ labels }->{ trashed } ) {
+              DEBUG "Skipping $item->{ title } (trashed)";
+          }
         
           if( $item->{ kind } eq "drive#file" ) {
             my $file = $item->{ originalFilename };
-            next if !defined $file; 
-        
-              # ignore non-pdf
-            next if $file !~ /\.pdf$/i;
+            if( !defined $file ) {
+                DEBUG "Skipping $item->{ title } (no originalFilename)";
+                next;
+            }
         
             push @docs, $file;
+          } else {
+            DEBUG "Skipping $item->{ title } ($item->{ kind })";
           }
         }
 
-        if( $data->{ nextPageToken } ) {
+        if( $search_opts->{ page } and $data->{ nextPageToken } ) {
             $opts->{ pageToken } = $data->{ nextPageToken };
         } else {
             last;
@@ -224,7 +241,8 @@ sub file_upload {
 
       # First, insert the file placeholder, according to
       # http://stackoverflow.com/questions/10317638
-    my $pdf_data = slurp $file;
+    my $file_data = slurp $file;
+    my $mime_type = $self->file_mime_type( $file );
 
     my $url;
 
@@ -232,7 +250,7 @@ sub file_upload {
         $url = URI->new( $self->{ api_file_url } );
 
         my $data = $self->http_json( $url, 
-            { mimeType => "application/pdf",
+            { mimeType => $mime_type,
               parents  => [ { id => $parent_id } ],
               title    => $title,
             }
@@ -247,8 +265,8 @@ sub file_upload {
     my $req = &HTTP::Request::Common::PUT(
         $url->as_string,
         Authorization  => "Bearer " . $self->{ cfg }->{ access_token },
-        "Content-Type" => "application/pdf",
-        Content        => $pdf_data,
+        "Content-Type" => $mime_type,
+        Content        => $file_data,
     );
 
     my $resp = $self->http_loop( $req );
@@ -313,6 +331,8 @@ sub children {
 ###########################################
     my( $self, $path, $opts, $search_opts ) = @_;
 
+    DEBUG "Determine children of $path";
+
     if( !defined $path ) {
         LOGDIE "No $path given";
     }
@@ -350,7 +370,7 @@ sub children {
         LOGDIE "Child $part not found";
     }
 
-    DEBUG "Getting content of folder";
+    DEBUG "Getting content of folder $folder_id";
 
     my $children = $self->children_by_folder_id( $folder_id, $opts, 
         $search_opts );
@@ -431,7 +451,7 @@ sub http_loop {
             $self->init();
         }
 
-        DEBUG "Fetching ", $req->url->as_string;
+        DEBUG "Fetching ", $req->url->as_string();
 
         $resp = $ua->request( $req );
 
@@ -474,13 +494,26 @@ sub http_json {
       );
     }
 
-    DEBUG "Fetching ", $req->as_string();
-
     my $resp = $self->http_loop( $req );
 
     my $data = from_json( $resp->content() );
 
     return $data;
+}
+
+###########################################
+sub file_mime_type {
+###########################################
+    my( $self, $file ) = @_;
+
+      # There don't seem to be great implementations of mimetype
+      # detection on CPAN, so just use this one for now.
+
+    if( !$self->{ magic } ) {
+        $self->{ magic } =  File::MMagic->new();
+    }
+
+    return $self->{ magic }->checktype_filename( $file );
 }
     
 1;

@@ -5,6 +5,8 @@ Revision history for Perl extension Net::Google::Drive::Simple
     (ms) Removed dependency on pdf files, now supports all types of files
          via File::MMagic.
     (ms) Better debug logs
+    (ms) Added better instructions on how to obtain Google Drive client
+         IDs and secrets.
 
 0.03 (2013/01/03)
     (ms) Now refreshing token right before a file_upload, regardless of expire

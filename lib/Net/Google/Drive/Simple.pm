@@ -560,10 +560,17 @@ this module, you need to run the script C<eg/google-drive-init> in this
 distribution.
 
 Before you run it, you need to register your 'app' with Google Drive
-and obtain a client_id and a client_secret from (make sure to register a
-an "installed application" and not a "web application"):
+and obtain a client_id and a client_secret from Google:
 
     https://developers.google.com/drive
+
+Click on "Enable the Drive API and SDK", and find "Create an API project in 
+the Google APIs Console". On the API console, create a new project, click
+"Services", and enable "Drive API" (leave "drive SDK" off). Then, under
+"API Access" in the navigation bar, create a client ID, and make sure to 
+register a an "installed application" (not a "web application"). "Redirect
+URIs" should contain "http://localhost". This will get you a "Client ID" 
+and a "Client Secret".
 
 Then, replace the following lines in C<eg/google-drive-init> with the
 values received:

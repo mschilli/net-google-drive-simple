@@ -1,6 +1,9 @@
 ######################################################################
 Revision history for Perl extension Net::Google::Drive::Simple
 
+0.05 (2013/03/18)
+    (ms) Requiring Sysadm::Install 0.43 for Win32 compatibility.
+
 0.04 (2013/02/03)
     (ms) Removed dependency on pdf files, now supports all types of files
          via File::MMagic.

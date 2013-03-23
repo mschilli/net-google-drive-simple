@@ -29,6 +29,7 @@ sub new {
         cfg         => undef,
         api_file_url    => "https://www.googleapis.com/drive/v2/files",
         api_upload_url  => "https://www.googleapis.com/upload/drive/v2/files",
+        upload_kbitps   => 1024, # 1 mbit/sec upload guesstimate
         %options,
     };
 
@@ -81,6 +82,23 @@ sub token_expire {
 
       # expire the token
     $self->{ cfg }->{ expires } = time() - 1;
+}
+
+###########################################
+sub token_expires_in {
+###########################################
+    my( $self ) = @_;
+
+    $self->{ cfg }->{ expires } - time();
+}
+
+###########################################
+sub file_upload_estimated_secs {
+###########################################
+    my( $self, $bytes ) = @_;
+
+    return $bytes / 
+      ( $self->{ upload_kbitps } / 8 * 1024 );
 }
 
 ###########################################
@@ -232,10 +250,12 @@ sub file_upload {
 ###########################################
     my( $self, $file, $parent_id, $file_id ) = @_;
 
-      # Since a file upload can take a long time, refresh the token
-      # just in case.
-    $self->token_expire();
-    $self->init();
+    if( $self->token_expires_in() <
+        $self->file_upload_estimate_secs( -s $file ) ) {
+          # file upload will take longer than token is valid, refresh
+        $self->token_expire();
+        $self->init();
+    }
 
     my $title = basename $file;
 

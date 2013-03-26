@@ -18,7 +18,7 @@ WriteMakefile(
     'VERSION_FROM' => 'lib/Net/Google/Drive/Simple.pm', # finds $VERSION
     'PREREQ_PM'    => {
       'LWP::UserAgent'   => 6.02,
-      'Sysadm::Install'  => 0.39,
+      'Sysadm::Install'  => 0.43,
       'YAML'             => 0.71,
       'JSON'             => 2.53,
       'Test::MockObject' => 1.09,

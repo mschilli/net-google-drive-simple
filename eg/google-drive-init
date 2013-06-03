@@ -76,7 +76,7 @@ get '/callback' => sub {
     code => $code 
   };
 
-  $self->render_text( "Tokens saved.",
+  $self->render(text => "Tokens saved.",
         layout => 'default' );
 };
 

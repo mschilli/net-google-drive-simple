@@ -17,7 +17,7 @@ use Log::Log4perl qw(:easy);
 use Data::Dumper;
 use File::MMagic;
 
-our $VERSION = "0.05";
+our $VERSION = "0.06";
 
 ###########################################
 sub new {

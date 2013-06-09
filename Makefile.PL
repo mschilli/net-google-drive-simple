@@ -24,7 +24,7 @@ WriteMakefile(
       'JSON'                 => 2.53,
       'Test::MockObject'     => 1.09,
       'Log::Log4perl'        => 1,
-      'Mojolicious'          => 1.16,
+      'Mojolicious'          => 4.13,
       'Pod::Usage'           => 1.36,
       'File::MMagic'         => 1.29,
     }, # e.g., Module::Name => 1.1

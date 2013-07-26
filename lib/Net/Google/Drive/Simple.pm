@@ -8,7 +8,7 @@ use LWP::UserAgent;
 use HTTP::Request;
 use HTTP::Headers;
 use HTTP::Request::Common;
-use Sysadm::Install qw( :all );
+use Sysadm::Install qw( slurp );
 use File::Basename;
 use YAML qw( LoadFile DumpFile );
 use JSON qw( from_json to_json );
@@ -398,6 +398,36 @@ sub data_factory {
 }
 
 ###########################################
+sub download {
+###########################################
+    my( $self, $url, $local_file ) = @_;
+
+    if( ref $url ) {
+        $url = $url->downloadUrl();
+    }
+
+    my $req = HTTP::Request->new(
+        GET => $url,
+        HTTP::Headers->new( Authorization => 
+            "Bearer " . $self->{ cfg }->{ access_token })
+      );
+
+    my $ua = LWP::UserAgent->new();
+    my $resp = $ua->request( $req, $local_file );
+
+    if( $resp->is_error() ) {
+        warn "Can't download $url ($!)";
+        return undef;
+    }
+
+    if( $local_file ) {
+        return 1;
+    }
+
+    return $resp->content();
+}
+
+###########################################
 sub token_refresh {
 ###########################################
   my( $self, $cfg ) = @_;
@@ -672,6 +702,22 @@ To overwrite an existing file on Google Drive, specify the file's ID as
 an optional parameter:
 
     $gd->file_upload( $file, $dir_id, $file_id );
+
+=item C<$gd-E<gt>download( $item, [$local_filename] )>
+
+Downloads an item found via C<files()> or C<children()>. Also accepts
+the downloadUrl of an item. If C<$local_filename> is not specified,
+C<download()> will return the data downloaded (this might be undesirable
+for large files). If C<$local_filename> is specified, C<download()> will
+store the downloaded data under the given file name.
+
+    my $gd = Net::Google::Drive::Simple->new();
+    my $files = $gd->files( { maxResults => 20 }, { page => 0 } );
+    for my $file ( @$files ) {
+        my $name = $file->originalFilename();
+        print "Downloading $name\n";
+        $gd->download( $file, $name ) or die "failed: $!";
+    }
 
 =back
 

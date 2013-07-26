@@ -146,6 +146,22 @@ METHODS
 
             $gd->file_upload( $file, $dir_id, $file_id );
 
+    "$gd->download( $item, [$local_filename] )"
+        Downloads an item found via "files()" or "children()". Also accepts
+        the downloadUrl of an item. If $local_filename is not specified,
+        "download()" will return the data downloaded (this might be
+        undesirable for large files). If $local_filename is specified,
+        "download()" will store the downloaded data under the given file
+        name.
+
+            my $gd = Net::Google::Drive::Simple->new();
+            my $files = $gd->files( { maxResults => 20 }, { page => 0 } );
+            for my $file ( @$files ) {
+                my $name = $file->originalFilename();
+                print "Downloading $name\n";
+                $gd->download( $file, $name ) or die "failed: $!";
+            }
+
 LOGGING/DEBUGGING
     Net::Google::Drive::Simple is Log4perl-enabled. To find out what's going
     on under the hood, turn on Log4perl:

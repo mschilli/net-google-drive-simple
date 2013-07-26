@@ -1,7 +1,8 @@
 ######################################################################
 Revision history for Perl extension Net::Google::Drive::Simple
 
-0.06 (not yet released)
+0.06 (2013/07/25)
+    (ms) fixed files() to return full objects, not just file names
     (ms) Applied patch by Yxes, pulling in a https lib and replacing 
          deprecated render_text Mojo method by render(text => x):
          https://github.com/mschilli/net-google-drive-simple/pull/4

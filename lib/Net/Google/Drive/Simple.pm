@@ -195,7 +195,7 @@ sub files {
                 next;
             }
         
-            push @docs, $file;
+            push @docs, $self->data_factory( $item );
           } else {
             DEBUG "Skipping $item->{ title } ($item->{ kind })";
           }

@@ -7,7 +7,7 @@ use strict;
 
 use Test::More;
 
-plan tests => 4;
+plan tests => 6;
 
 use Net::Google::Drive::Simple;
 use Log::Log4perl qw(:easy);
@@ -37,4 +37,9 @@ SKIP: {
 
     $files = $gd->files( { maxResults => 3 }, { page => 0 } );
     is ref($files), "ARRAY", "files found";
+
+    ( $files ) = $gd->files( { maxResults => 3 }, { page => 0 },
+    );
+    is ref($files), "ARRAY", "files found";
+    ok length $files->[0]->originalFilename(), "org filename";
 }

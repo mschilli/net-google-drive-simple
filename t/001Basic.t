@@ -7,7 +7,9 @@ use strict;
 
 use Test::More;
 
-plan tests => 6;
+my $nof_tests      = 6;
+my $nof_live_tests = 5;
+plan tests => $nof_tests;
 
 use Net::Google::Drive::Simple;
 use Log::Log4perl qw(:easy);
@@ -20,7 +22,7 @@ ok 1, "loaded ok";
 
 SKIP: {
     if( !$ENV{ LIVE_TEST } ) {
-        skip "LIVE_TEST not set, skipping live tests", 3;
+        skip "LIVE_TEST not set, skipping live tests", $nof_live_tests;
     }
 
     my( $files, $parent ) = $gd->children( "/", 

@@ -32,6 +32,15 @@ if( @ARGV ) {
   $client_id= $credentials->{client_id};
   $client_secret= $credentials->{client_secret};
 };
+if( not $client_id or 'XXX' eq $client_id ) {
+    die <<EOM;
+  # You need to obtain a client_id and a client_secret from
+  # https://developers.google.com/drive to use this.
+  # Pass the path to the credentials file on the command line
+  # to $0
+  # or edit the file to add the credentials.
+EOM
+};
 
 my $scope    = 
   "https://www.googleapis.com/auth/drive";

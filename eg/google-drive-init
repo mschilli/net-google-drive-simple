@@ -21,8 +21,17 @@ use URI;
 
   # You need to obtain a client_id and a client_secret from
   # https://developers.google.com/drive to use this.
+
+  # You can pass the path on the command line or just enter the credentials to this file:
 my $client_id     = "XXX";
 my $client_secret = "YYY";
+if( @ARGV ) {
+  # Credentials file is given on the command line, as downloaded from Google as JSON file
+  my $credentials_file= $ARGV[0];
+  my $credentials= from_json( do { local(@ARGV,$/)=$credentials_file; <> })->{installed};
+  $client_id= $credentials->{client_id};
+  $client_secret= $credentials->{client_secret};
+};
 
 my $scope    = 
   "https://www.googleapis.com/auth/drive";

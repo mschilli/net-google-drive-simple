@@ -1,6 +1,18 @@
 ######################################################################
 Revision history for Perl extension Net::Google::Drive::Simple
 
+0.08 (2013/07/27)
+    (ms) Max Maischein added
+         * Allow passing of the Google JSON file on the command line, 
+           and using the data found in the JSON file as credentials
+         * Output an error message if the user did not patch the file, and 
+           also did not pass the JSON file on the command line
+         * Try to find the JSON file in the users home directory
+         * a new search() method to perform non-folder-based general 
+           searches for files
+    (ms) Maettu documented exporting Google Docs
+         (https://github.com/mschilli/net-google-drive-simple/pull/7)
+
 0.07 (2013/07/27)
     (ms) fixed broken test suite
 

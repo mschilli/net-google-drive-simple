@@ -1,5 +1,5 @@
 ######################################################################
-    Net::Google::Drive::Simple 0.07
+    Net::Google::Drive::Simple 0.08
 ######################################################################
 
 NAME
@@ -8,7 +8,7 @@ NAME
 SYNOPSIS
         use Net::Google::Drive::Simple;
 
-          # requires a ~/.google-drive.yml file with an access token, 
+          # requires a ~/.google-drive.yml file with an access token,
           # see description below.
         my $gd = Net::Google::Drive::Simple->new();
 
@@ -20,9 +20,9 @@ SYNOPSIS
 
             next if !$child->can( "downloadUrl" );
 
-            print $child->originalFilename(), 
+            print $child->originalFilename(),
                   " can be downloaded at ",
-                  $child->downloadUrl(), 
+                  $child->downloadUrl(),
                   "\n";
         }
 
@@ -161,6 +161,53 @@ METHODS
                 print "Downloading $name\n";
                 $gd->download( $file, $name ) or die "failed: $!";
             }
+
+        Be aware that only documents like PDF or png can be downloaded
+        directly. Google Drive Documents like spreadsheets or (text)
+        documents need to be exported into one of the available formats.
+        Check for "exportLinks" on a file given. In case of a document that
+        can be exported you will receive a hash in the form:
+
+            {
+                'format_1' => 'download_link_1',
+                'format_2' => 'download_link_2',
+                ...
+            }
+
+        Choose your download link and use it as an argument to the
+        download() function which can also take urls directly.
+
+            my $gd = Net::Google::Drive::Simple->new();
+            my $children = $gd->children( '/path/to/folder/on/google/drive' );
+            for my $child ( @$children ) {
+                if ($child->can( 'exportLinks' )){
+                    my $type_chosen;
+                    foreach my $type (keys %{$child->exportLinks()}){
+                        # Take any type you can get..
+                        $type_chosen = $type;
+                        # ..but choose your preferred format, opendocument here:
+                        last if $type =~/oasis\.opendocument/;
+                    }
+                    my $url = $child->exportLinks()->{$type_chosen};
+
+                    $gd->download($url, 'my/local/file');
+
+                }
+            }
+
+    "my $files = $gd->search( )"
+            my $children= $gd->search({ maxResults => 20 },{ page => 0 },
+                                      "title contains 'Futurama'");
+
+        Search files for attributes. See
+        <https://developers.google.com/drive/web/search-parameters> for a
+        definition of the attributes.
+
+        To list all available files, those on the drive, those directly
+        shared with the user, and those generally available to the user, use
+        an empty search:
+
+          my $children= $gd->search({},{ page => 0 },"");
 
 LOGGING/DEBUGGING
     Net::Google::Drive::Simple is Log4perl-enabled. To find out what's going

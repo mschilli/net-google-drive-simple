@@ -117,7 +117,7 @@ sub api_test {
 
     my $req = HTTP::Request->new(
         GET => $url->as_string,
-        HTTP::Headers->new( Authorization => 
+        HTTP::Headers->new( Authorization =>
             "Bearer " . $self->{ cfg }->{ access_token })
     );
 
@@ -152,7 +152,7 @@ sub file_url {
 
     my $url = URI->new( $self->{ api_file_url } );
     $url->query_form( $opts );
-    
+
     return $url;
 }
 
@@ -176,25 +176,25 @@ sub files {
     $self->init();
 
     my @docs = ();
-        
+
     while( 1 ) {
         my $url = $self->file_url( $opts );
         my $data = $self->http_json( $url );
-    
+
         for my $item ( @{ $data->{ items } } ) {
-        
+
             # ignore trash
           if( $item->{ labels }->{ trashed } ) {
               DEBUG "Skipping $item->{ title } (trashed)";
           }
-        
+
           if( $item->{ kind } eq "drive#file" ) {
             my $file = $item->{ originalFilename };
             if( !defined $file ) {
                 DEBUG "Skipping $item->{ title } (no originalFilename)";
                 next;
             }
-        
+
             push @docs, $self->data_factory( $item );
           } else {
             DEBUG "Skipping $item->{ title } ($item->{ kind })";
@@ -249,7 +249,7 @@ sub file_upload {
     if( ! defined $file_id ) {
         $url = URI->new( $self->{ api_file_url } );
 
-        my $data = $self->http_json( $url, 
+        my $data = $self->http_json( $url,
             { mimeType => $mime_type,
               parents  => [ { id => $parent_id } ],
               title    => $title,
@@ -293,7 +293,7 @@ sub children_by_folder_id {
     };
 
     if( !defined $opts ) {
-        $opts = { 
+        $opts = {
             maxResults => 100,
         };
     }
@@ -306,7 +306,7 @@ sub children_by_folder_id {
     }
 
     my @children = ();
-    
+
     while( 1 ) {
         $url->query_form( $opts );
 
@@ -322,7 +322,7 @@ sub children_by_folder_id {
             last;
         }
     }
-    
+
     return \@children;
 }
 
@@ -351,7 +351,7 @@ sub children {
 
         DEBUG "Looking up part $part (folder_id=$folder_id)";
 
-        my $children = $self->children_by_folder_id( $folder_id, 
+        my $children = $self->children_by_folder_id( $folder_id,
           { maxResults    => 100, # path resolution maxResults is different
           },
           { %$search_opts, title => $part },
@@ -447,7 +447,7 @@ sub download {
 
     my $req = HTTP::Request->new(
         GET => $url,
-        HTTP::Headers->new( Authorization => 
+        HTTP::Headers->new( Authorization =>
             "Bearer " . $self->{ cfg }->{ access_token })
       );
 
@@ -466,6 +466,7 @@ sub download {
     return $resp->content();
 }
 
+
 ###########################################
 sub token_refresh {
 ###########################################
@@ -477,11 +478,11 @@ sub token_refresh {
     'https://accounts.google.com/o' .
     '/oauth2/token',
     [
-      refresh_token => 
+      refresh_token =>
         $cfg->{ refresh_token },
-      client_id     => 
+      client_id     =>
         $cfg->{ client_id },
-      client_secret => 
+      client_secret =>
         $cfg->{ client_secret },
       grant_type    => 'refresh_token',
     ]
@@ -491,9 +492,9 @@ sub token_refresh {
 
   if ( $resp->is_success() ) {
     my $data = from_json( $resp->content() );
-    $cfg->{ access_token } = 
+    $cfg->{ access_token } =
       $data->{ access_token };
-    $cfg->{ expires } = 
+    $cfg->{ expires } =
       time() + $data->{ expires_in };
     DEBUG "Token refreshed, will expire in $data->{ expires_in } seconds";
     return 1;
@@ -558,7 +559,7 @@ sub http_json {
     } else {
       $req = HTTP::Request->new(
         GET => $url->as_string,
-        HTTP::Headers->new( Authorization => 
+        HTTP::Headers->new( Authorization =>
             "Bearer " . $self->{ cfg }->{ access_token })
       );
     }
@@ -584,7 +585,7 @@ sub file_mime_type {
 
     return $self->{ magic }->checktype_filename( $file );
 }
-    
+
 1;
 
 __END__
@@ -597,7 +598,7 @@ Net::Google::Drive::Simple - Simple modification of Google Drive data
 
     use Net::Google::Drive::Simple;
 
-      # requires a ~/.google-drive.yml file with an access token, 
+      # requires a ~/.google-drive.yml file with an access token,
       # see description below.
     my $gd = Net::Google::Drive::Simple->new();
 
@@ -609,9 +610,9 @@ Net::Google::Drive::Simple - Simple modification of Google Drive data
 
         next if !$child->can( "downloadUrl" );
 
-        print $child->originalFilename(), 
+        print $child->originalFilename(),
               " can be downloaded at ",
-              $child->downloadUrl(), 
+              $child->downloadUrl(),
               "\n";
     }
 
@@ -624,7 +625,7 @@ to keep a local directory in sync with a remote directory on Google Drive.
 
 =head2 GETTING STARTED
 
-To get the access token required to access your Google Drive data via 
+To get the access token required to access your Google Drive data via
 this module, you need to run the script C<eg/google-drive-init> in this
 distribution.
 
@@ -633,12 +634,12 @@ and obtain a client_id and a client_secret from Google:
 
     https://developers.google.com/drive
 
-Click on "Enable the Drive API and SDK", and find "Create an API project in 
+Click on "Enable the Drive API and SDK", and find "Create an API project in
 the Google APIs Console". On the API console, create a new project, click
 "Services", and enable "Drive API" (leave "drive SDK" off). Then, under
-"API Access" in the navigation bar, create a client ID, and make sure to 
+"API Access" in the navigation bar, create a client ID, and make sure to
 register a an "installed application" (not a "web application"). "Redirect
-URIs" should contain "http://localhost". This will get you a "Client ID" 
+URIs" should contain "http://localhost". This will get you a "Client ID"
 and a "Client Secret".
 
 Then, replace the following lines in C<eg/google-drive-init> with the
@@ -679,7 +680,7 @@ or uses C<~/.google-drive.yml> in the user's home directory as default.
 =item C<my $children = $gd-E<gt>children( "/path/to" )>
 
 Return the entries under a given path on the Google Drive as a reference
-to an array. Each entry 
+to an array. Each entry
 is an object composed of the JSON data returned by the Google Drive API.
 Each object offers methods named like the fields in the JSON data, e.g.
 C<originalFilename()>, C<downloadUrl>, etc.
@@ -696,7 +697,7 @@ caller:
 
     my( $children, $parent ) = $gd->children( "/path/to" );
 
-If the caller now wants to e.g. insert a file into the directory, its 
+If the caller now wants to e.g. insert a file into the directory, its
 ID is available in $parent.
 
 Each child comes back as a files#resource type and gets mapped into
@@ -706,7 +707,7 @@ an object that offers access to the various fields via methods:
         print $child->kind(), " ", $child->title(), "\n";
     }
 
-Please refer to 
+Please refer to
 
     https://developers.google.com/drive/v2/reference/files#resource
 
@@ -735,7 +736,7 @@ Returns the ID of the new folder or undef in case of an error.
 =item C<$gd-E<gt>file_upload( $file, $dir_id )>
 
 Uploads the content of the file C<$file> into the directory with the ID
-$dir_id on Google Drive. Uses C<$file> as the file name. 
+$dir_id on Google Drive. Uses C<$file> as the file name.
 
 To overwrite an existing file on Google Drive, specify the file's ID as
 an optional parameter:
@@ -758,9 +759,39 @@ store the downloaded data under the given file name.
         $gd->download( $file, $name ) or die "failed: $!";
     }
 
+Be aware that only documents like PDF or png can be downloaded directly. Google Drive Documents like spreadsheets or (text) documents need to be exported into one of the available formats.
+Check for "exportLinks" on a file given. In case of a document that can be exported you will receive a hash in the form:
+
+    {
+        'format_1' => 'download_link_1',
+        'format_2' => 'download_link_2',
+        ...
+    }
+
+Choose your download link and use it as an argument to the download() function which can also take urls directly.
+
+    my $gd = Net::Google::Drive::Simple->new();
+    my $children = $gd->children( '/path/to/folder/on/google/drive' );
+    for my $child ( @$children ) {
+        if ($child->can( 'exportLinks' )){
+            my $type_chosen;
+            foreach my $type (keys %{$child->exportLinks()}){
+                # Take any type you can get..
+                $type_chosen = $type;
+                # ..but choose your preferred format, opendocument here:
+                last if $type =~/oasis\.opendocument/;
+            }
+            my $url = $child->exportLinks()->{$type_chosen};
+
+            $gd->download($url, 'my/local/file');
+
+        }
+    }
+
 =item C<my $files = $gd-E<gt>search( )>
 
-  my $children= $gd->search({ maxResults => 20 },{ page => 0 },"title contains 'Futurama'");
+    my $children= $gd->search({ maxResults => 20 },{ page => 0 },
+                              "title contains 'Futurama'");
 
 Search files for attributes. See
 L<https://developers.google.com/drive/web/search-parameters>

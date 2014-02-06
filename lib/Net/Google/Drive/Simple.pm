@@ -372,7 +372,7 @@ sub children {
 
     DEBUG "Getting content of folder $folder_id";
 
-    my $children = $self->children_by_folder_id( $folder_id, $opts, 
+    my $children = $self->children_by_folder_id( $folder_id, $opts,
         $search_opts );
 
     if( wantarray ) {
@@ -380,6 +380,45 @@ sub children {
     } else {
         return $children;
     }
+}
+
+###########################################
+sub search {
+###########################################
+    my( $self, $opts, $search_opts, $query ) = @_;
+    $search_opts||= { page => 1 };
+
+    $self->init();
+
+    if( !defined $opts ) {
+        $opts = {
+            maxResults => 100,
+        };
+    }
+
+    my $url = URI->new( $self->{ api_file_url } );
+
+    $opts->{ q }= $query;
+
+    my @children = ();
+
+    while( 1 ) {
+        $url->query_form( $opts );
+
+        my $data = $self->http_json( $url );
+
+        for my $item ( @{ $data->{ items } } ) {
+            push @children, $self->data_factory( $item );
+        }
+
+        if( $search_opts->{ page } and $data->{ nextPageToken } ) {
+            $opts->{ pageToken } = $data->{ nextPageToken };
+        } else {
+            last;
+        }
+    }
+
+    return \@children;
 }
 
 ###########################################
@@ -718,6 +757,20 @@ store the downloaded data under the given file name.
         print "Downloading $name\n";
         $gd->download( $file, $name ) or die "failed: $!";
     }
+
+=item C<my $files = $gd-E<gt>search( )>
+
+  my $children= $gd->search({ maxResults => 20 },{ page => 0 },"title contains 'Futurama'");
+
+Search files for attributes. See
+L<https://developers.google.com/drive/web/search-parameters>
+for a definition of the attributes.
+
+To list all available files, those on the drive, those directly shared
+with the user, and those generally available to the user, use an
+empty search:
+
+  my $children= $gd->search({},{ page => 0 },"");
 
 =back
 

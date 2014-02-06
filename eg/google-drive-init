@@ -21,8 +21,35 @@ use URI;
 
   # You need to obtain a client_id and a client_secret from
   # https://developers.google.com/drive to use this.
+
+  # You can pass the path on the command line or just enter the credentials to this file:
 my $client_id     = "XXX";
 my $client_secret = "YYY";
+if( 'XXX' eq $client_id ) {
+    # User did not patch the file, so we try to find the credentials from the command line
+    if( !@ARGV ) {
+        @ARGV= glob("~/client_secret*.apps.googleusercontent.com.json");
+        if( 1 != @ARGV ) {
+            warn "More than one applicable Google Drive client secret found. Using $ARGV[0]";
+        };
+    };
+};
+if( @ARGV ) {
+  # Credentials file is given on the command line, as downloaded from Google as JSON file
+  my $credentials_file= $ARGV[0];
+  my $credentials= from_json( do { local(@ARGV,$/)=$credentials_file; <> })->{installed};
+  $client_id= $credentials->{client_id};
+  $client_secret= $credentials->{client_secret};
+};
+if( not $client_id or 'XXX' eq $client_id ) {
+    die <<EOM;
+  # You need to obtain a client_id and a client_secret from
+  # https://developers.google.com/drive to use this.
+  # Pass the path to the credentials file on the command line
+  # to $0
+  # or edit the file to add the credentials.
+EOM
+};
 
 my $scope    = 
   "https://www.googleapis.com/auth/drive";

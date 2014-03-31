@@ -1,6 +1,10 @@
 ######################################################################
 Revision history for Perl extension Net::Google::Drive::Simple
 
+0.09 (not yet released)
+    (ms) Fixed link to set up client ID and secret, as suggested by 
+         Tom Shield ([rt.cpan.org #94316]).
+
 0.08 (2013/07/27)
     (ms) Max Maischein added
          * Allow passing of the Google JSON file on the command line, 

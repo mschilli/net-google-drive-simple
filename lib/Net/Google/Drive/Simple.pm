@@ -632,7 +632,7 @@ distribution.
 Before you run it, you need to register your 'app' with Google Drive
 and obtain a client_id and a client_secret from Google:
 
-    https://developers.google.com/drive
+    https://developers.google.com/drive/web/enable-sdk
 
 Click on "Enable the Drive API and SDK", and find "Create an API project in
 the Google APIs Console". On the API console, create a new project, click

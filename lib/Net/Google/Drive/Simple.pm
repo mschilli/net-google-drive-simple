@@ -180,14 +180,9 @@ sub files {
     while( 1 ) {
         my $url = $self->file_url( $opts );
         my $data = $self->http_json( $url );
+        my $next_item = $self->item_iterator( $data );
 
-        for my $item ( @{ $data->{ items } } ) {
-
-            # ignore trash
-          if( $item->{ labels }->{ trashed } ) {
-              DEBUG "Skipping $item->{ title } (trashed)";
-          }
-
+        while( my $item = $next_item->() ) {
           if( $item->{ kind } eq "drive#file" ) {
             my $file = $item->{ originalFilename };
             if( !defined $file ) {
@@ -311,8 +306,9 @@ sub children_by_folder_id {
         $url->query_form( $opts );
 
         my $data = $self->http_json( $url );
+        my $next_item = $self->item_iterator( $data );
 
-        for my $item ( @{ $data->{ items } } ) {
+        while( my $item = $next_item->() ) {
             push @children, $self->data_factory( $item );
         }
 
@@ -406,8 +402,9 @@ sub search {
         $url->query_form( $opts );
 
         my $data = $self->http_json( $url );
+        my $next_item = $self->item_iterator( $data );
 
-        for my $item ( @{ $data->{ items } } ) {
+        while( my $item = $next_item->() ) {
             push @children, $self->data_factory( $item );
         }
 
@@ -584,6 +581,33 @@ sub file_mime_type {
     }
 
     return $self->{ magic }->checktype_filename( $file );
+}
+
+###########################################
+sub item_iterator {
+###########################################
+    my( $self, $data ) = @_;
+
+    my $idx = 0;
+
+    if( !defined $data ) {
+        die "no data in item_iterator";
+    }
+
+    return sub {
+        {
+            my $next_item = $data->{ items }->[ $idx++ ];
+
+            return if !defined $next_item;
+
+            if( $next_item->{ labels }->{ trashed } ) {
+                DEBUG "Skipping $next_item->{ title } (trashed)";
+                redo;
+            }
+
+            return $next_item;
+        }
+    };
 }
 
 1;

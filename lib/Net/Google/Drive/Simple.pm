@@ -16,8 +16,9 @@ use Test::MockObject;
 use Log::Log4perl qw(:easy);
 use Data::Dumper;
 use File::MMagic;
+use OAuth::Cmdline::GoogleDrive;
 
-our $VERSION = "0.08";
+our $VERSION = "0.09";
 
 ###########################################
 sub new {
@@ -25,17 +26,12 @@ sub new {
     my($class, %options) = @_;
 
     my $self = {
-        config_file => undef,
-        cfg         => undef,
+        init_done       => undef,
         api_file_url    => "https://www.googleapis.com/drive/v2/files",
         api_upload_url  => "https://www.googleapis.com/upload/drive/v2/files",
+        oauth           => OAuth::Cmdline::GoogleDrive->new( ),
         %options,
     };
-
-    if( ! $self->{ config_file } ) {
-        my( $home )  = glob "~";
-        $self->{ config_file } = "$home/.google-drive.yml";
-    }
 
     bless $self, $class;
 }
@@ -45,65 +41,18 @@ sub init {
 ###########################################
     my( $self, $path ) = @_;
 
-    if( $self->{ init_done } and
-        ! $self->token_expired() ) {
+    if( $self->{ init_done } ) {
         return 1;
     }
 
-    my $cfg = {};
-
-    if( ! -f $self->{ config_file } ) {
-        LOGDIE "$self->{ config_file } not found.";
-    }
-
-    $cfg = LoadFile $self->{ config_file };
-    $self->{ cfg } = $cfg;
-
-    $self->token_refresh( $cfg );
-
-    DEBUG "Testing API with refreshed token";
+    DEBUG "Testing API";
     if( !$self->api_test() ) {
-        LOGDIE "api_test failed after token refresh";
+        LOGDIE "api_test failed";
     }
-
-    DumpFile( $self->{ config_file }, $cfg );
-    $self->{ cfg } = $cfg;
 
     $self->{ init_done } = 1;
 
     return 1;
-}
-
-###########################################
-sub token_expire {
-###########################################
-    my( $self ) = @_;
-
-      # expire the token
-    $self->{ cfg }->{ expires } = time() - 1;
-}
-
-###########################################
-sub token_expired {
-###########################################
-    my( $self ) = @_;
-
-    my $time_remaining = $self->{ cfg }->{ expires } - time();
-
-    if( $time_remaining < 300 ) {
-
-        if( $time_remaining < 0 ) {
-            INFO "Token expired ", -$time_remaining, " seconds ago";
-        } else {
-            INFO "Token will expire in $time_remaining seconds";
-        }
-
-        INFO "Token needs to be refreshed.";
-
-        return 1;
-    }
-
-    return 0;
 }
 
 ###########################################
@@ -117,10 +66,8 @@ sub api_test {
 
     my $req = HTTP::Request->new(
         GET => $url->as_string,
-        HTTP::Headers->new( Authorization =>
-            "Bearer " . $self->{ cfg }->{ access_token })
     );
-
+    $req->header( $self->{ oauth }->authorization_headers() );
     DEBUG "Fetching $url";
 
     my $resp = $ua->request( $req );
@@ -259,7 +206,7 @@ sub file_upload {
 
     my $req = &HTTP::Request::Common::PUT(
         $url->as_string,
-        Authorization  => "Bearer " . $self->{ cfg }->{ access_token },
+        $self->{ oauth }->authorization_headers(),
         "Content-Type" => $mime_type,
         Content        => $file_data,
     );
@@ -444,9 +391,8 @@ sub download {
 
     my $req = HTTP::Request->new(
         GET => $url,
-        HTTP::Headers->new( Authorization =>
-            "Bearer " . $self->{ cfg }->{ access_token })
-      );
+    );
+    $req->header( $self->{ oauth }->authorization_headers() );
 
     my $ua = LWP::UserAgent->new();
     my $resp = $ua->request( $req, $local_file );
@@ -463,43 +409,6 @@ sub download {
     return $resp->content();
 }
 
-
-###########################################
-sub token_refresh {
-###########################################
-  my( $self, $cfg ) = @_;
-
-  DEBUG "Refreshing access token";
-
-  my $req = &HTTP::Request::Common::POST(
-    'https://accounts.google.com/o' .
-    '/oauth2/token',
-    [
-      refresh_token =>
-        $cfg->{ refresh_token },
-      client_id     =>
-        $cfg->{ client_id },
-      client_secret =>
-        $cfg->{ client_secret },
-      grant_type    => 'refresh_token',
-    ]
-  );
-
-  my $resp = $self->http_loop( $req, 1 );
-
-  if ( $resp->is_success() ) {
-    my $data = from_json( $resp->content() );
-    $cfg->{ access_token } =
-      $data->{ access_token };
-    $cfg->{ expires } =
-      time() + $data->{ expires_in };
-    DEBUG "Token refreshed, will expire in $data->{ expires_in } seconds";
-    return 1;
-  }
-
-  ERROR "Token refresh failed: ", $resp->status_line();
-  return undef;
-}
 
 ###########################################
 sub http_loop {
@@ -549,16 +458,15 @@ sub http_json {
     if( $post_data ) {
         $req = &HTTP::Request::Common::POST(
             $url->as_string,
-            Authorization => "Bearer " . $self->{ cfg }->{ access_token },
+            $self->{ oauth }->authorization_headers(),
             "Content-Type"=> "application/json",
             Content       => to_json( $post_data ),
         );
     } else {
       $req = HTTP::Request->new(
         GET => $url->as_string,
-        HTTP::Headers->new( Authorization =>
-            "Bearer " . $self->{ cfg }->{ access_token })
       );
+      $req->header( $self->{ oauth }->authorization_headers() );
     }
 
     my $resp = $self->http_loop( $req );

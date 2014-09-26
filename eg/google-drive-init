@@ -1,160 +1,24 @@
 #!/usr/local/bin/perl -w
-# This script starts a web server on port 8082 on your local machine.
-# When you point your browser at http://localhost:8082, you'll see a link
-# that will lead you to Google Drive's login page, where you authenticate and 
-# then allow the app (specified by client_id and client_secret below) access to 
-# your Google Drive data. The script will then receive an access token
-# from Google Drive and store it in ~/.google-drive.yml from where
-# other scripts can pick it up and work on the data stored on the user's
-# Google Drive account.
-# Note that you need to obtain client_id and a client_secret below from
-# https://developers.google.com/drive before you can use this script.
-
+###########################################
+# google-drive-init
+# Mike Schilli, 2014 (m@perlmeister.com)
+###########################################
 use strict;
-use Mojolicious::Lite;
-use YAML qw( DumpFile );
-use Log::Log4perl qw(:easy);
-use LWP::UserAgent;
-use HTTP::Request::Common;
-use JSON qw( from_json );
-use URI;
+use lib 'lib';
 
-  # You need to obtain a client_id and a client_secret from
-  # https://developers.google.com/drive to use this.
+use OAuth::Cmdline::GoogleDrive;
+use OAuth::Cmdline::Mojo;
 
-  # You can pass the path on the command line or just enter the credentials to this file:
-my $client_id     = "XXX";
-my $client_secret = "YYY";
-if( 'XXX' eq $client_id ) {
-    # User did not patch the file, so we try to find the credentials from the command line
-    if( !@ARGV ) {
-        @ARGV= glob("~/client_secret*.apps.googleusercontent.com.json");
-        if( 1 != @ARGV ) {
-            warn "More than one applicable Google Drive client secret found. Using $ARGV[0]";
-        };
-    };
-};
-if( @ARGV ) {
-  # Credentials file is given on the command line, as downloaded from Google as JSON file
-  my $credentials_file= $ARGV[0];
-  my $credentials= from_json( do { local(@ARGV,$/)=$credentials_file; <> })->{installed};
-  $client_id= $credentials->{client_id};
-  $client_secret= $credentials->{client_secret};
-};
-if( not $client_id or 'XXX' eq $client_id ) {
-    die <<EOM;
-  # You need to obtain a client_id and a client_secret from
-  # https://developers.google.com/drive to use this.
-  # Pass the path to the credentials file on the command line
-  # to $0
-  # or edit the file to add the credentials.
-EOM
-};
-
-my $scope    = 
-  "https://www.googleapis.com/auth/drive";
-my $listen   = "http://localhost:8082";
-my($home)    = glob '~';
-my $CFG_FILE = 
-  "$home/.google-drive.yml";
-my $redir_uri = "$listen/callback";
-
-my $login_uri = URI->new( 
-  "https://accounts.google.com" .
-  "/o/oauth2/auth" );
-
-$login_uri->query_form (
-  response_type => "code",
-  client_id     => $client_id,
-  redirect_uri  => $redir_uri,
-  scope         => $scope,
+my $oauth = OAuth::Cmdline::GoogleDrive->new(
+    client_id     => "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    client_secret => "XXXXXXXXXXXXXXXXXXXXXXXX",
+    login_uri     => "https://accounts.google.com/o/oauth2/auth",
+    token_uri     => "https://accounts.google.com/o/oauth2/token",
+    scope         => "https://www.googleapis.com/auth/drive",
 );
 
-@ARGV = (qw(daemon --listen), $listen);
+my $app = OAuth::Cmdline::Mojo->new(
+    oauth => $oauth,
+);
 
-###########################################
-get '/' => sub {
-###########################################
-  my ( $self ) = @_;
-
-  $self->stash->{login_url} = 
-      $login_uri->as_string();
-
-} => 'index';
-
-###########################################
-get '/callback' => sub {
-###########################################
-  my ( $self ) = @_;
-
-  my $code = $self->param( "code" );
-
-  my( $access_token, $refresh_token, 
-      $expires_in ) = 
-    tokens_get( $self->param( "code" ) );
-
-  umask 0177;
-  DumpFile $CFG_FILE, { 
-    access_token  => $access_token,
-    refresh_token => $refresh_token,
-    client_id     => $client_id,
-    client_secret => $client_secret,
-    expires => time() + $expires_in,
-    code => $code 
-  };
-
-  $self->render(text => "Tokens saved.",
-        layout => 'default' );
-};
-
-###########################################
-sub tokens_get {
-###########################################
-  my( $code ) = @_;
-
-  my $req = &HTTP::Request::Common::POST(
-    'https://accounts.google.com/o/' .
-    'oauth2/token',
-    [
-      code => $code,
-      client_id => $client_id,
-      client_secret => $client_secret,
-      redirect_uri => $redir_uri,
-      grant_type => 'authorization_code',
-    ]
-  );
-
-  my $ua = LWP::UserAgent->new();
-  my $resp = $ua->request($req);
-
-  if( $resp->is_success() ) {
-    my $data = 
-      from_json( $resp->content() );
-
-    return ( $data->{ access_token }, 
-             $data->{ refresh_token },
-             $data->{ expires_in } );
-  }
-
-  warn $resp->status_line();
-  return undef;
-}
-
-app->start;
-
-__DATA__
-###########################################
-@@ index.html.ep
-% layout 'default';
-<a href="<%= $login_url %>"
->Login on Google Drive</a>
-
-@@ layouts/default.html.ep
-<!doctype html><html>
-  <head><title>Token Fetcher</title></head>
-    <body>
-      <pre>
-      <%== content %>
-      </pre>
-    </body>
-</html>
+$app->start( 'daemon', '-l', $oauth->local_uri );

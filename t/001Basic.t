@@ -40,7 +40,7 @@ SKIP: {
     $files = $gd->files( { maxResults => 3 }, { page => 0 } );
     is ref($files), "ARRAY", "files found";
 
-    ( $files ) = $gd->files( { maxResults => 3 }, { page => 0 },
+    ( $files ) = $gd->files( { maxResults => 10 }, { page => 0 },
     );
     is ref($files), "ARRAY", "files found";
     ok length $files->[0]->originalFilename(), "org filename";

@@ -1,11 +1,12 @@
 ######################################################################
 Revision history for Perl extension Net::Google::Drive::Simple
 
-0.09 (not yet released)
+0.09 (2014/09/25)
     (ms) Fixed link to set up client ID and secret, as suggested by 
          Tom Shield ([rt.cpan.org #94316]).
     (ms) All list functions (files(), children(), etc.) now filter out
          trashed items.
+    (ms) Delegated oauth logic to OAuth::Cmdline
 
 0.08 (2013/07/27)
     (ms) Max Maischein added

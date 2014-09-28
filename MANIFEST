@@ -1,5 +1,6 @@
 Changes
 eg/file-download
+eg/file-upload
 eg/google-drive-init
 eg/google-drive-upsync
 lib/Net/Google/Drive/Simple.pm

@@ -27,7 +27,7 @@ WriteMakefile(
       'Mojolicious'          => 4.13,
       'Pod::Usage'           => 1.36,
       'File::MMagic'         => 1.29,
-      'OAuth::Cmdline'       => 0.02,
+      'OAuth::Cmdline'       => 0.03,
     }, # e.g., Module::Name => 1.1
     EXE_FILES                => ["eg/google-drive-init"],
     $ExtUtils::MakeMaker::VERSION >= 6.50 ? (%$meta_merge) : (),

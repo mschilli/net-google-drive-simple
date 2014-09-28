@@ -1,6 +1,10 @@
 ######################################################################
 Revision history for Perl extension Net::Google::Drive::Simple
 
+0.10 (2014/09/27)
+    (ms) Fixed file_upload(), which uses the token_expire() method
+         in OAuth::Cmdline 0.03.
+
 0.09 (2014/09/25)
     (ms) Fixed link to set up client ID and secret, as suggested by 
          Tom Shield ([rt.cpan.org #94316]).

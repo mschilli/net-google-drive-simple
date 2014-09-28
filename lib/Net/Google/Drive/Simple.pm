@@ -18,7 +18,7 @@ use Data::Dumper;
 use File::MMagic;
 use OAuth::Cmdline::GoogleDrive;
 
-our $VERSION = "0.09";
+our $VERSION = "0.10";
 
 ###########################################
 sub new {
@@ -176,8 +176,7 @@ sub file_upload {
 
       # Since a file upload can take a long time, refresh the token
       # just in case.
-    $self->token_expire();
-    $self->init();
+    $self->{ oauth }->token_expire();
 
     my $title = basename $file;
 

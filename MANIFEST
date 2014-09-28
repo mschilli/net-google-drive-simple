@@ -11,3 +11,4 @@ MYMETA.json
 MYMETA.yml
 README
 t/001Basic.t
+t/data/testfile

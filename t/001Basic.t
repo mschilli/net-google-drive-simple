@@ -5,10 +5,11 @@
 use warnings;
 use strict;
 
+use FindBin qw( $Bin );
 use Test::More;
 
-my $nof_tests      = 6;
-my $nof_live_tests = 5;
+my $nof_tests      = 8;
+my $nof_live_tests = 7;
 plan tests => $nof_tests;
 
 use Net::Google::Drive::Simple;
@@ -28,6 +29,12 @@ SKIP: {
     my( $files, $parent ) = $gd->children( "/", 
         { maxResults => 3 }, { page => 0 },
     );
+
+    # upload a test file
+    my $testfile = "$Bin/data/testfile";
+    my $file_id = $gd->file_upload( $testfile, $parent );
+    ok defined $file_id, "upload ok";
+    ok $gd->file_delete( $file_id ), "delete ok";
 
     is ref($files), "ARRAY", "children returned ok";
 

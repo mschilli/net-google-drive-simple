@@ -218,6 +218,33 @@ sub file_upload {
 }
 
 ###########################################
+sub file_delete {
+###########################################
+    my( $self, $file_id ) = @_;
+
+    my $url;
+
+    LOGDIE 'Deletion requires file_id' if( ! defined $file_id );
+
+    $url = URI->new( $self->{ api_file_url } . "/$file_id" );
+
+    my $req = &HTTP::Request::Common::DELETE(
+        $url->as_string,
+        $self->{ oauth }->authorization_headers(),
+    );
+
+    my $resp = $self->http_loop( $req );
+
+    DEBUG $resp->as_string;
+
+    if( ! $resp->is_success ) {
+        return undef;
+    }
+
+    return $file_id;
+}
+
+###########################################
 sub children_by_folder_id {
 ###########################################
     my( $self, $folder_id, $opts, $search_opts ) = @_;
@@ -733,6 +760,10 @@ with the user, and those generally available to the user, use an
 empty search:
 
   my $children= $gd->search({},{ page => 0 },"");
+
+=item C<$gd-E<gt>file_delete( file_id )>
+
+Delete the file with the specified ID from Google Drive.
 
 =back
 

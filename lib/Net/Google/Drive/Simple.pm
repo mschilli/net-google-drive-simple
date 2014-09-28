@@ -30,10 +30,23 @@ sub new {
         api_file_url    => "https://www.googleapis.com/drive/v2/files",
         api_upload_url  => "https://www.googleapis.com/upload/drive/v2/files",
         oauth           => OAuth::Cmdline::GoogleDrive->new( ),
+        error           => undef,
         %options,
     };
 
     bless $self, $class;
+}
+
+###########################################
+sub error {
+###########################################
+    my( $self, $set ) = @_;
+
+    if( defined $set ) {
+        $self->{ error } = $set;
+    }
+
+    return $self->{ error };
 }
 
 ###########################################
@@ -76,6 +89,8 @@ sub api_test {
         DEBUG "API tested OK";
         return 1;
     }
+
+    $self->error( $resp->message() );
 
     ERROR "API error: ", $resp->message();
     return 0;
@@ -127,6 +142,11 @@ sub files {
     while( 1 ) {
         my $url = $self->file_url( $opts );
         my $data = $self->http_json( $url );
+
+        if( !defined $data ) {
+            return undef;
+        }
+
         my $next_item = $self->item_iterator( $data );
 
         while( my $item = $next_item->() ) {
@@ -166,6 +186,10 @@ sub folder_create {
         mimeType => "application/vnd.google-apps.folder",
     } );
 
+    if( ! defined $data ) {
+        return undef;
+    }
+
     return $data->{ id };
 }
 
@@ -197,6 +221,10 @@ sub file_upload {
             }
         );
 
+        if( ! defined $data ) {
+            return undef;
+        }
+
         $file_id = $data->{ id };
     }
 
@@ -211,6 +239,11 @@ sub file_upload {
     );
 
     my $resp = $self->http_loop( $req );
+
+    if( $resp->is_error() ) {
+        $self->error( $self->message() );
+        return undef;
+    }
 
     DEBUG $resp->as_string;
 
@@ -237,7 +270,8 @@ sub file_delete {
 
     DEBUG $resp->as_string;
 
-    if( ! $resp->is_success ) {
+    if( $resp->is_error ) {
+        $self->error( $resp->message() );
         return undef;
     }
 
@@ -279,6 +313,11 @@ sub children_by_folder_id {
         $url->query_form( $opts );
 
         my $data = $self->http_json( $url );
+
+        if( ! defined $data ) {
+            return undef;
+        }
+
         my $next_item = $self->item_iterator( $data );
 
         while( my $item = $next_item->() ) {
@@ -326,6 +365,10 @@ sub children {
           { %$search_opts, title => $part },
         );
 
+        if( ! defined $children ) {
+            return undef;
+        }
+
         for my $child ( @$children ) {
             DEBUG "Found child ", $child->title();
             if( $child->title() eq $part ) {
@@ -336,13 +379,20 @@ sub children {
             }
         }
 
-        LOGDIE "Child $part not found";
+        my $msg = "Child $part not found";
+        $self->error( $msg );
+        ERROR $msg;
+        return undef;
     }
 
     DEBUG "Getting content of folder $folder_id";
 
     my $children = $self->children_by_folder_id( $folder_id, $opts,
         $search_opts );
+
+    if( ! defined $children ) {
+        return undef;
+    }
 
     if( wantarray ) {
         return( $children, $parent );
@@ -375,6 +425,10 @@ sub search {
         $url->query_form( $opts );
 
         my $data = $self->http_json( $url );
+        if( ! defined $data ) {
+            return undef;
+        }
+
         my $next_item = $self->item_iterator( $data );
 
         while( my $item = $next_item->() ) {
@@ -424,7 +478,9 @@ sub download {
     my $resp = $ua->request( $req, $local_file );
 
     if( $resp->is_error() ) {
-        warn "Can't download $url ($!)";
+        my $msg = "Can't download $url (" . $resp->message() . ")";
+        ERROR $msg;
+        $self->error( $msg );
         return undef;
     }
 
@@ -458,13 +514,15 @@ sub http_loop {
         $resp = $ua->request( $req );
 
         if( ! $resp->is_success() ) {
+            $self->error( $resp->message() );
             warn "Failed with ", $resp->code(), ": ", $resp->message();
             if( --$RETRIES >= 0 ) {
                 ERROR "Retrying in $SLEEP_INTERVAL seconds";
                 sleep $SLEEP_INTERVAL;
                 redo;
             } else {
-                die "Out of retries.";
+                ERROR "Out of retries.";
+                return undef;
             }
         }
 
@@ -496,6 +554,11 @@ sub http_json {
     }
 
     my $resp = $self->http_loop( $req );
+
+    if( $resp->is_error() ) {
+        $self->error( $resp->message() );
+        return undef;
+    }
 
     my $data = from_json( $resp->content() );
 
@@ -766,6 +829,14 @@ empty search:
 Delete the file with the specified ID from Google Drive.
 
 =back
+
+=head1 Error handling
+
+In case of an error while retrieving information from the Google Drive
+API, the methods above will return C<undef> and a more detailed error
+message can be obtained by calling the C<error()> method:
+
+    print "An error occurred: ", $gd->error();
 
 =head1 LOGGING/DEBUGGING
 

@@ -18,7 +18,7 @@ use Data::Dumper;
 use File::MMagic;
 use OAuth::Cmdline::GoogleDrive;
 
-our $VERSION = "0.10";
+our $VERSION = "0.11";
 
 ###########################################
 sub new {

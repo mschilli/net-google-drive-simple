@@ -1,5 +1,5 @@
 ######################################################################
-    Net::Google::Drive::Simple 0.10
+    Net::Google::Drive::Simple 0.11
 ######################################################################
 
 NAME
@@ -208,6 +208,16 @@ METHODS
         an empty search:
 
           my $children= $gd->search({},{ page => 0 },"");
+
+    "$gd->file_delete( file_id )"
+        Delete the file with the specified ID from Google Drive.
+
+Error handling
+    In case of an error while retrieving information from the Google Drive
+    API, the methods above will return "undef" and a more detailed error
+    message can be obtained by calling the "error()" method:
+
+        print "An error occurred: ", $gd->error();
 
 LOGGING/DEBUGGING
     Net::Google::Drive::Simple is Log4perl-enabled. To find out what's going

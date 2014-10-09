@@ -1,10 +1,13 @@
 ######################################################################
 Revision history for Perl extension Net::Google::Drive::Simple
 
-0.11 (not yet released)
+0.11 (2014/10/08)
     (ms) Ilmari Ikonen implemented file_delete(). Added docs and tests.
     (ms) Failed calls no longer die, but return undef, where $gd->error()
          holds an error message.
+    (ms) Added access_type=offline ([rt.cpan.org #99372]) since Google
+         apparently won't sent a refresh token in some cases if it's not
+         set.
 
 0.10 (2014/09/27)
     (ms) Fixed file_upload(), which uses the token_expire() method

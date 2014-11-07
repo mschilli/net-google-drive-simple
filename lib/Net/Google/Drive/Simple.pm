@@ -220,7 +220,7 @@ sub file_upload {
             { mimeType    => $mime_type,
               parents     => [ { id => $parent_id } ],
               title       => $opts->{ title } ? $opts->{ title } : $title,
-              description => $opts->{ description}
+              description => $opts->{ description },
             }
         );
 

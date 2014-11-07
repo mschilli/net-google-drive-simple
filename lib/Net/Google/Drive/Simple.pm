@@ -196,7 +196,9 @@ sub folder_create {
 ###########################################
 sub file_upload {
 ###########################################
-    my( $self, $file, $parent_id, $file_id ) = @_;
+    my( $self, $file, $parent_id, $file_id, $opts ) = @_;
+
+    $opts = {} if !defined $opts;
 
       # Since a file upload can take a long time, refresh the token
       # just in case.
@@ -215,9 +217,10 @@ sub file_upload {
         $url = URI->new( $self->{ api_file_url } );
 
         my $data = $self->http_json( $url,
-            { mimeType => $mime_type,
-              parents  => [ { id => $parent_id } ],
-              title    => $title,
+            { mimeType    => $mime_type,
+              parents     => [ { id => $parent_id } ],
+              title       => $opts->{ title } ? $opts->{ title } : $title,
+              description => $opts->{ description}
             }
         );
 

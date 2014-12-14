@@ -522,7 +522,7 @@ sub http_loop {
                 redo;
             } else {
                 ERROR "Out of retries.";
-                return undef;
+                return $resp;
             }
         }
 

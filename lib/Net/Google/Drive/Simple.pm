@@ -178,19 +178,7 @@ sub folder_create {
 ###########################################
     my( $self, $title, $parent ) = @_;
 
-    my $url = URI->new( $self->{ api_file_url } );
-
-    my $data = $self->http_json( $url, {
-        title    => $title,
-        parents  => [ { id => $parent } ],
-        mimeType => "application/vnd.google-apps.folder",
-    } );
-
-    if( ! defined $data ) {
-        return undef;
-    }
-
-    return $data->{ id };
+    return $self->file_create( $title, "application/vnd.google-apps.folder", $parent );
 }
 
 ###########################################

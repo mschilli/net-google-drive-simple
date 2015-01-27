@@ -1,7 +1,7 @@
 ######################################################################
 Revision history for Perl extension Net::Google::Drive::Simple
 
-0.12 (2015-01-26)
+0.12 (2015/01/26)
     (ms) [rt.cpan.org #100789] http_loop() now returns a HTTP::Response 
          object even in the error case, to allow for the is_error() 
          method to work in the calling code.

@@ -5,6 +5,8 @@ Revision history for Perl extension Net::Google::Drive::Simple
     (ms) [rt.cpan.org #100789] http_loop() now returns a HTTP::Response 
          object even in the error case, to allow for the is_error() 
          method to work in the calling code.
+    (ms) [rt.cpan.org [#101655] fixed docs, removed unused config_file 
+         parameter in constructor.
 
 0.11 (2014/10/08)
     (ms) Ilmari Ikonen implemented file_delete(). Added docs and tests.

@@ -18,7 +18,7 @@ use Data::Dumper;
 use File::MMagic;
 use OAuth::Cmdline::GoogleDrive;
 
-our $VERSION = "0.11";
+our $VERSION = "0.12";
 
 ###########################################
 sub new {
@@ -690,13 +690,7 @@ transparently when the old one is about to expire.
 =item C<new()>
 
 Constructor, creates a helper object to retrieve Google Drive data
-later. Takes an optional name of the C<.google-drive.yml> file
-
-    my $gd = Net::Google::Drive::Simple->new(
-        config_file => "gd.yml",
-    );
-
-or uses C<~/.google-drive.yml> in the user's home directory as default.
+later.
 
 =item C<my $children = $gd-E<gt>children( "/path/to" )>
 

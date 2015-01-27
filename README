@@ -1,5 +1,5 @@
 ######################################################################
-    Net::Google::Drive::Simple 0.11
+    Net::Google::Drive::Simple 0.12
 ######################################################################
 
 NAME
@@ -75,14 +75,7 @@ DESCRIPTION
 METHODS
     "new()"
         Constructor, creates a helper object to retrieve Google Drive data
-        later. Takes an optional name of the ".google-drive.yml" file
-
-            my $gd = Net::Google::Drive::Simple->new(
-                config_file => "gd.yml",
-            );
-
-        or uses "~/.google-drive.yml" in the user's home directory as
-        default.
+        later.
 
     "my $children = $gd->children( "/path/to" )"
         Return the entries under a given path on the Google Drive as a

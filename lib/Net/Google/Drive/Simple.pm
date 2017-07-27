@@ -251,6 +251,72 @@ sub file_upload {
 }
 
 ###########################################
+sub file_mvdir {
+###########################################
+    my( $self, $file_id, $target_folder_id ) = @_;
+
+    my $url;
+
+    LOGDIE 'file_mvdir requires file_id' if( ! defined $file_id );
+    LOGDIE 'file_mvdir requires folder_id' if( ! defined $target_folder_id );
+
+    # Determine the file's parent(s)
+    $url = URI->new( $self->{ api_file_url } . "/$file_id/parents" );
+    my $data = $self->http_json( $url );
+    print Dumper( $data );
+
+    # Delete it from the current parent
+
+    # Add a new parent
+}
+
+###########################################
+sub path_resolve {
+###########################################
+    my( $self, $path, $search_opts ) = @_;
+
+    $search_opts = {} if !defined $search_opts;
+
+    my @parts = split '/', $path;
+    my $parent = $parts[0] = "root";
+    DEBUG "Parent: $parent";
+
+    my $folder_id = shift @parts;
+
+    PART: for my $part ( @parts ) {
+
+        DEBUG "Looking up part $part (folder_id=$folder_id)";
+
+        my $children = $self->children_by_folder_id( $folder_id,
+          { maxResults    => 100, # path resolution maxResults is different
+          },
+          { %$search_opts, title => $part },
+        );
+
+        if( ! defined $children ) {
+            return undef;
+        }
+
+        for my $child ( @$children ) {
+            DEBUG "Found child ", $child->title();
+            if( $child->title() eq $part ) {
+                $folder_id = $child->id();
+                $parent = $folder_id;
+                DEBUG "Parent: $parent";
+                next PART;
+            }
+        }
+
+        my $msg = "Child $part not found";
+        $self->error( $msg );
+        ERROR $msg;
+        return undef;
+    }
+
+    return( $folder_id, $parent );
+}
+
+###########################################
 sub file_delete {
 ###########################################
     my( $self, $file_id ) = @_;
@@ -349,39 +415,9 @@ sub children {
         $search_opts = {};
     }
 
-    my @parts = split '/', $path;
-    my $parent = $parts[0] = "root";
-    DEBUG "Parent: $parent";
+    my( $folder_id, $parent ) = $self->path_resolve( $path, $search_opts );
 
-    my $folder_id = shift @parts;
-
-    PART: for my $part ( @parts ) {
-
-        DEBUG "Looking up part $part (folder_id=$folder_id)";
-
-        my $children = $self->children_by_folder_id( $folder_id,
-          { maxResults    => 100, # path resolution maxResults is different
-          },
-          { %$search_opts, title => $part },
-        );
-
-        if( ! defined $children ) {
-            return undef;
-        }
-
-        for my $child ( @$children ) {
-            DEBUG "Found child ", $child->title();
-            if( $child->title() eq $part ) {
-                $folder_id = $child->id();
-                $parent = $folder_id;
-                DEBUG "Parent: $parent";
-                next PART;
-            }
-        }
-
-        my $msg = "Child $part not found";
-        $self->error( $msg );
-        ERROR $msg;
+    if( !defined $folder_id ) {
         return undef;
     }
 

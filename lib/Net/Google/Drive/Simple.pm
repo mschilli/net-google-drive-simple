@@ -903,6 +903,12 @@ empty search:
 
 Delete the file with the specified ID from Google Drive.
 
+=item C<$gd-E<gt>drive_mvdir( "/gdrive/path/to/file", "/path/to/new/folder" )>
+
+Move an existing file to a new folder. Removes the file's "parent" 
+setting (pointing to the old folder) and then adds the new folder as a 
+new parent.
+
 =back
 
 =head1 Error handling

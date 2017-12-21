@@ -688,6 +688,34 @@ sub item_iterator {
     };
 }
 
+###########################################
+sub file_metadata {
+###########################################
+    my( $self, $file_id ) = @_;
+
+    LOGDIE 'Deletion requires file_id' if( ! defined $file_id );
+
+    my $url = URI->new( $self->{ api_file_url } . "/$file_id" );
+
+    my $req = &HTTP::Request::Common::GET(
+        $url->as_string,
+        $self->{ oauth }->authorization_headers(),
+    );
+
+	my $ua = LWP::UserAgent->new();
+	my $resp = $ua->request( $req );
+
+	if( $resp->is_error ) {
+        $self->error( $resp->message() );
+        return undef;
+    }
+
+    my $data = from_json( $resp->content() );
+
+    # return $self->data_factory( $data );
+    return $data;
+}
+
 1;
 
 __END__
@@ -908,6 +936,10 @@ Delete the file with the specified ID from Google Drive.
 Move an existing file to a new folder. Removes the file's "parent" 
 setting (pointing to the old folder) and then adds the new folder as a 
 new parent.
+
+=item C<$gd-E<gt>file_metadata( file_id )>
+
+Return metadata about the file with the specified ID from Google Drive.
 
 =back
 

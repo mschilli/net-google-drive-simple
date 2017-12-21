@@ -937,7 +937,7 @@ Move an existing file to a new folder. Removes the file's "parent"
 setting (pointing to the old folder) and then adds the new folder as a 
 new parent.
 
-=item C<$gd-E<gt>file_metadata( file_id )>
+=item C<my $metadata_hash_ref = $gd-E<gt>file_metadata( file_id )>
 
 Return metadata about the file with the specified ID from Google Drive.
 

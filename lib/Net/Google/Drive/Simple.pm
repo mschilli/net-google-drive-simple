@@ -178,12 +178,20 @@ sub folder_create {
 ###########################################
     my( $self, $title, $parent ) = @_;
 
+    return $self->file_create( $title, "application/vnd.google-apps.folder", $parent );
+}
+
+###########################################
+sub file_create {
+###########################################
+    my( $self, $title, $mime_type, $parent ) = @_;
+
     my $url = URI->new( $self->{ api_file_url } );
 
     my $data = $self->http_json( $url, {
         title    => $title,
         parents  => [ { id => $parent } ],
-        mimeType => "application/vnd.google-apps.folder",
+        mimeType => $mime_type,
     } );
 
     if( ! defined $data ) {
@@ -828,6 +836,15 @@ Drive item's fields, according to the API (see C<children()>).
 
 Create a new folder as a child of the folder with the id C<$parent_id>.
 Returns the ID of the new folder or undef in case of an error.
+
+=item C<my $id = $gd-E<gt>file_create( "folder-name", "mime-type", $parent_id )>
+
+Create a new file with the given mime type as a child of the folder with the id C<$parent_id>.
+Returns the ID of the new file or undef in case of an error.
+
+Example to create an empty google spreadsheet:
+
+    my $id = $gd->file_create( "Quarter Results", "application/vnd.google-apps.spreadsheet", "root" );
 
 =item C<$gd-E<gt>file_upload( $file, $dir_id )>
 

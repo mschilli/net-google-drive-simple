@@ -8,3 +8,5 @@ CVS
 MANIFEST.bak
 adm/release
 .gz$
+MYMETA.json
+MYMETA.yml

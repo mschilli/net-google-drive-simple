@@ -484,7 +484,7 @@ sub children {
     }
 
     if( wantarray ) {
-        return( $children, $parent );
+        return( $children, $folder_id );
     } else {
         return $children;
     }

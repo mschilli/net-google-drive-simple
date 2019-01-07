@@ -9,7 +9,7 @@ use FindBin qw( $Bin );
 use Test::More;
 
 my $nof_tests      = 11;
-my $nof_live_tests = 9;
+my $nof_live_tests = $nof_tests - 1;
 plan tests => $nof_tests;
 
 use Net::Google::Drive::Simple;

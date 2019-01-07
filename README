@@ -228,10 +228,10 @@ LOGGING/DEBUGGING
         Log::Log4perl->easy_init($DEBUG);
 
 LEGALESE
-    Copyright 2012 by Mike Schilli, all rights reserved. This program is
+    Copyright 2019 by Mike Schilli, all rights reserved. This program is
     free software, you can redistribute it and/or modify it under the same
     terms as Perl itself.
 
 AUTHOR
-    2012, Mike Schilli <cpan@perlmeister.com>
+    2012-2019, Mike Schilli <cpan@perlmeister.com>
 

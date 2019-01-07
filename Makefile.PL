@@ -1,6 +1,6 @@
 ######################################################################
 # Makefile.PL for Net::Google::Drive::Simple
-# 2012, Mike Schilli <cpan@perlmeister.com>
+# 2019, Mike Schilli <cpan@perlmeister.com>
 ######################################################################
 use ExtUtils::MakeMaker;
 

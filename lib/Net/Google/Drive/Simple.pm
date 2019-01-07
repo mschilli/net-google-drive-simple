@@ -978,10 +978,10 @@ To find out what's going on under the hood, turn on Log4perl:
 
 =head1 LEGALESE
 
-Copyright 2012-2018 by Mike Schilli, all rights reserved.
+Copyright 2012-2019 by Mike Schilli, all rights reserved.
 This program is free software, you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
 =head1 AUTHOR
 
-2012-2018, Mike Schilli <cpan@perlmeister.com>
+2012-2019, Mike Schilli <cpan@perlmeister.com>

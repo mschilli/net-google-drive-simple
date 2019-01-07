@@ -8,7 +8,7 @@ use strict;
 use FindBin qw( $Bin );
 use Test::More;
 
-my $nof_tests      = 10;
+my $nof_tests      = 11;
 my $nof_live_tests = $nof_tests - 1;
 plan tests => $nof_tests;
 
@@ -43,6 +43,8 @@ SKIP: {
     my $testfile = "$Bin/data/testfile";
     my $file_id = $gd->file_upload( $testfile, $parent );
     ok defined $file_id, "upload ok";
+    my $metadata = $gd->file_metadata( $file_id );
+    ok (((defined $metadata) && ($metadata->{title} eq 'testfile')), "metadata ok");
     ok $gd->file_delete( $file_id ), "delete ok";
 
     is ref($files), "ARRAY", "children returned ok";

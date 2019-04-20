@@ -16,6 +16,7 @@ my $meta_merge = {
 WriteMakefile(
     'NAME'         => 'Net::Google::Drive::Simple',
     'VERSION_FROM' => 'lib/Net/Google/Drive/Simple.pm', # finds $VERSION
+    'LICENSE'      => 'perl',
     'PREREQ_PM'    => {
       'LWP::UserAgent'       => 6.02,
       'LWP::Protocol::https' => 6.04,

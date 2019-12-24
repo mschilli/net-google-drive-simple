@@ -20,7 +20,7 @@ use OAuth::Cmdline::GoogleDrive;
 
 use Net::Google::Drive::Simple::Item;
 
-our $VERSION = "0.14";
+our $VERSION = '0.15';
 
 ###########################################
 sub new {

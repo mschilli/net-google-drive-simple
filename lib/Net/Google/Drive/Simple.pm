@@ -25,14 +25,14 @@ our $VERSION = "0.14";
 ###########################################
 sub new {
 ###########################################
-    my($class, %options) = @_;
+    my ( $class, %options ) = @_;
 
     my $self = {
-        init_done       => undef,
-        api_file_url    => "https://www.googleapis.com/drive/v2/files",
-        api_upload_url  => "https://www.googleapis.com/upload/drive/v2/files",
-        oauth           => OAuth::Cmdline::GoogleDrive->new( ),
-        error           => undef,
+        init_done      => undef,
+        api_file_url   => "https://www.googleapis.com/drive/v2/files",
+        api_upload_url => "https://www.googleapis.com/upload/drive/v2/files",
+        oauth          => OAuth::Cmdline::GoogleDrive->new(),
+        error          => undef,
         %options,
     };
 
@@ -42,30 +42,30 @@ sub new {
 ###########################################
 sub error {
 ###########################################
-    my( $self, $set ) = @_;
+    my ( $self, $set ) = @_;
 
-    if( defined $set ) {
-        $self->{ error } = $set;
+    if ( defined $set ) {
+        $self->{error} = $set;
     }
 
-    return $self->{ error };
+    return $self->{error};
 }
 
 ###########################################
 sub init {
 ###########################################
-    my( $self, $path ) = @_;
+    my ( $self, $path ) = @_;
 
-    if( $self->{ init_done } ) {
+    if ( $self->{init_done} ) {
         return 1;
     }
 
     DEBUG "Testing API";
-    if( !$self->api_test() ) {
+    if ( !$self->api_test() ) {
         LOGDIE "api_test failed";
     }
 
-    $self->{ init_done } = 1;
+    $self->{init_done} = 1;
 
     return 1;
 }
@@ -73,7 +73,7 @@ sub init {
 ###########################################
 sub api_test {
 ###########################################
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $url = $self->file_url( { maxResults => 1 } );
 
@@ -82,12 +82,12 @@ sub api_test {
     my $req = HTTP::Request->new(
         GET => $url->as_string,
     );
-    $req->header( $self->{ oauth }->authorization_headers() );
+    $req->header( $self->{oauth}->authorization_headers() );
     DEBUG "Fetching $url";
 
-    my $resp = $ua->request( $req );
+    my $resp = $ua->request($req);
 
-    if( $resp->is_success() ) {
+    if ( $resp->is_success() ) {
         DEBUG "API tested OK";
         return 1;
     }
@@ -101,7 +101,7 @@ sub api_test {
 ###########################################
 sub file_url {
 ###########################################
-    my( $self, $opts ) = @_;
+    my ( $self, $opts ) = @_;
 
     $opts = {} if !defined $opts;
 
@@ -114,8 +114,8 @@ sub file_url {
         %$opts,
     };
 
-    my $url = URI->new( $self->{ api_file_url } );
-    $url->query_form( $opts );
+    my $url = URI->new( $self->{api_file_url} );
+    $url->query_form($opts);
 
     return $url;
 }
@@ -123,9 +123,9 @@ sub file_url {
 ###########################################
 sub files {
 ###########################################
-    my( $self, $opts, $search_opts ) = @_;
+    my ( $self, $opts, $search_opts ) = @_;
 
-    if( !defined $search_opts ) {
+    if ( !defined $search_opts ) {
         $search_opts = {};
     }
     $search_opts = {
@@ -133,7 +133,7 @@ sub files {
         %$search_opts,
     };
 
-    if( !defined $opts ) {
+    if ( !defined $opts ) {
         $opts = {};
     }
 
@@ -141,32 +141,34 @@ sub files {
 
     my @docs = ();
 
-    while( 1 ) {
-        my $url = $self->file_url( $opts );
-        my $data = $self->http_json( $url );
+    while (1) {
+        my $url  = $self->file_url($opts);
+        my $data = $self->http_json($url);
 
         return unless defined $data;
 
-        my $next_item = $self->item_iterator( $data );
+        my $next_item = $self->item_iterator($data);
 
-        while( my $item = $next_item->() ) {
+        while ( my $item = $next_item->() ) {
 
-        if( $item->{ kind } eq "drive#file" ) {
-            my $file = $item->{ originalFilename };
-            if( !defined $file ) {
-                DEBUG "Skipping $item->{ title } (no originalFilename)";
-                next;
+            if ( $item->{kind} eq "drive#file" ) {
+                my $file = $item->{originalFilename};
+                if ( !defined $file ) {
+                    DEBUG "Skipping $item->{ title } (no originalFilename)";
+                    next;
+                }
+
+                push @docs, $self->data_factory($item);
             }
-
-            push @docs, $self->data_factory( $item );
-          } else {
-            DEBUG "Skipping $item->{ title } ($item->{ kind })";
-          }
+            else {
+                DEBUG "Skipping $item->{ title } ($item->{ kind })";
+            }
         }
 
-        if( $search_opts->{ page } and $data->{ nextPageToken } ) {
-            $opts->{ pageToken } = $data->{ nextPageToken };
-        } else {
+        if ( $search_opts->{page} and $data->{nextPageToken} ) {
+            $opts->{pageToken} = $data->{nextPageToken};
+        }
+        else {
             last;
         }
     }
@@ -177,7 +179,7 @@ sub files {
 ###########################################
 sub folder_create {
 ###########################################
-    my( $self, $title, $parent ) = @_;
+    my ( $self, $title, $parent ) = @_;
 
     return $self->file_create( $title, "application/vnd.google-apps.folder", $parent );
 }
@@ -185,67 +187,72 @@ sub folder_create {
 ###########################################
 sub file_create {
 ###########################################
-    my( $self, $title, $mime_type, $parent ) = @_;
+    my ( $self, $title, $mime_type, $parent ) = @_;
 
-    my $url = URI->new( $self->{ api_file_url } );
+    my $url = URI->new( $self->{api_file_url} );
 
-    my $data = $self->http_json( $url, {
-        title    => $title,
-        parents  => [ { id => $parent } ],
-        mimeType => $mime_type,
-    } );
+    my $data = $self->http_json(
+        $url,
+        {
+            title    => $title,
+            parents  => [ { id => $parent } ],
+            mimeType => $mime_type,
+        }
+    );
 
     return unless defined $data;
 
-    return $data->{ id };
+    return $data->{id};
 }
 
 ###########################################
 sub file_upload {
 ###########################################
-    my( $self, $file, $parent_id, $file_id ) = @_;
+    my ( $self, $file, $parent_id, $file_id ) = @_;
 
-      # Since a file upload can take a long time, refresh the token
-      # just in case.
-    $self->{ oauth }->token_expire();
+    # Since a file upload can take a long time, refresh the token
+    # just in case.
+    $self->{oauth}->token_expire();
 
     my $title = basename $file;
 
-      # First, insert the file placeholder, according to
-      # http://stackoverflow.com/questions/10317638
+    # First, insert the file placeholder, according to
+    # http://stackoverflow.com/questions/10317638
     my $file_data = slurp $file;
-    my $mime_type = $self->file_mime_type( $file );
+    my $mime_type = $self->file_mime_type($file);
 
     my $url;
 
-    if( ! defined $file_id ) {
-        $url = URI->new( $self->{ api_file_url } );
+    if ( !defined $file_id ) {
+        $url = URI->new( $self->{api_file_url} );
 
-        my $data = $self->http_json( $url,
-            { mimeType => $mime_type,
-              parents  => [ { id => $parent_id } ],
-              title    => $title,
+        my $data = $self->http_json(
+            $url,
+            {
+                mimeType => $mime_type,
+                parents  => [ { id => $parent_id } ],
+                title    => $title,
             }
         );
 
         return unless defined $data;
 
-        $file_id = $data->{ id };
+        $file_id = $data->{id};
     }
 
-    $url = URI->new( $self->{ api_upload_url } . "/$file_id" );
+    $url = URI->new( $self->{api_upload_url} . "/$file_id" );
     $url->query_form( uploadType => "media" );
 
     my $req = &HTTP::Request::Common::PUT(
         $url->as_string,
-        $self->{ oauth }->authorization_headers(),
+        $self->{oauth}->authorization_headers(),
         "Content-Type" => $mime_type,
         Content        => $file_data,
     );
 
-    my $resp = $self->http_loop( $req );
+    my $resp = $self->http_loop($req);
 
-    if( $resp->is_error() ) {
+    if ( $resp->is_error() ) {
         $self->error( $self->message() );
         return;
     }
@@ -258,24 +265,24 @@ sub file_upload {
 ###########################################
 sub file_mvdir {
 ###########################################
-    my( $self, $path, $target_folder ) = @_;
+    my ( $self, $path, $target_folder ) = @_;
 
     my $url;
 
-    if( !defined $path or !defined $target_folder ) {
+    if ( !defined $path or !defined $target_folder ) {
         LOGDIE "Missing parameter";
     }
 
     # Determine the file's parent in the path
-    my( $file_id, $folder_id ) = $self->path_resolve( $path );
+    my ( $file_id, $folder_id ) = $self->path_resolve($path);
 
-    if( !defined $file_id ) {
+    if ( !defined $file_id ) {
         LOGDIE "Cannot find source file: $path";
     }
 
-    my( $target_folder_id ) = $self->path_resolve( $target_folder );
+    my ($target_folder_id) = $self->path_resolve($target_folder);
 
-    if( !defined $target_folder_id ) {
+    if ( !defined $target_folder_id ) {
         LOGDIE "Cannot find destination path: $target_folder";
     }
 
@@ -283,17 +290,15 @@ sub file_mvdir {
     print "folder_id=$folder_id\n";
     print "target_folder_id=$target_folder_id\n";
 
-      # Delete it from the current parent
-    $url = URI->new( $self->{ api_file_url } .
-        "/$folder_id/children/$file_id" );
-    if( !$self->http_delete( $url ) ) {
+    # Delete it from the current parent
+    $url = URI->new( $self->{api_file_url} . "/$folder_id/children/$file_id" );
+    if ( !$self->http_delete($url) ) {
         LOGDIE "Failed to remove $path from parent folder.";
     }
 
-      # Add a new parent
-    $url = URI->new( $self->{ api_file_url } .
-        "/$target_folder_id/children" );
-    if( !$self->http_json( $url, { id => $file_id } ) ) {
+    # Add a new parent
+    $url = URI->new( $self->{api_file_url} . "/$target_folder_id/children" );
+    if ( !$self->http_json( $url, { id => $file_id } ) ) {
         LOGDIE "Failed to insert $path into $target_folder.";
     }
 
@@ -303,33 +308,35 @@ sub file_mvdir {
 ###########################################
 sub path_resolve {
 ###########################################
-    my( $self, $path, $search_opts ) = @_;
+    my ( $self, $path, $search_opts ) = @_;
 
     $search_opts = {} if !defined $search_opts;
 
-    my @parts = split '/', $path;
-    my @ids   = ();
+    my @parts  = split '/', $path;
+    my @ids    = ();
     my $parent = $parts[0] = "root";
     DEBUG "Parent: $parent";
 
     my $folder_id = shift @parts;
     push @ids, $folder_id;
 
-    PART: for my $part ( @parts ) {
+  PART: for my $part (@parts) {
 
         DEBUG "Looking up part $part (folder_id=$folder_id)";
 
-        my $children = $self->children_by_folder_id( $folder_id,
-          { maxResults    => 100, # path resolution maxResults is different
-          },
-          { %$search_opts, title => $part },
+        my $children = $self->children_by_folder_id(
+            $folder_id,
+            {
+                maxResults => 100,    # path resolution maxResults is different
+            },
+            { %$search_opts, title => $part },
         );
 
         return unless defined $children;
 
-        for my $child ( @$children ) {
+        for my $child (@$children) {
             DEBUG "Found child ", $child->title();
-            if( $child->title() eq $part ) {
+            if ( $child->title() eq $part ) {
                 $folder_id = $child->id();
                 unshift @ids, $folder_id;
                 $parent = $folder_id;
@@ -339,31 +346,32 @@ sub path_resolve {
         }
 
         my $msg = "Child $part not found";
-        $self->error( $msg );
+        $self->error($msg);
         ERROR $msg;
         return;
     }
 
-    if( @ids == 1 ) {
-          # parent of root is root
-        return( @ids, @ids );
+    if ( @ids == 1 ) {
+
+        # parent of root is root
+        return ( @ids, @ids );
     }
 
-    return( @ids );
+    return (@ids);
 }
 
 ###########################################
 sub file_delete {
 ###########################################
-    my( $self, $file_id ) = @_;
+    my ( $self, $file_id ) = @_;
 
     my $url;
 
-    LOGDIE 'Deletion requires file_id' if( ! defined $file_id );
+    LOGDIE 'Deletion requires file_id' if ( !defined $file_id );
 
-    $url = URI->new( $self->{ api_file_url } . "/$file_id" );
+    $url = URI->new( $self->{api_file_url} . "/$file_id" );
 
-    if( $self->http_delete( $url ) ) {
+    if ( $self->http_delete($url) ) {
         return $file_id;
     }
 
@@ -373,18 +381,18 @@ sub file_delete {
 ###########################################
 sub http_delete {
 ###########################################
-    my( $self, $url ) = @_;
+    my ( $self, $url ) = @_;
 
     my $req = &HTTP::Request::Common::DELETE(
         $url,
-        $self->{ oauth }->authorization_headers(),
+        $self->{oauth}->authorization_headers(),
     );
 
-    my $resp = $self->http_loop( $req );
+    my $resp = $self->http_loop($req);
 
     DEBUG $resp->as_string;
 
-    if( $resp->is_error ) {
+    if ( $resp->is_error ) {
         $self->error( $resp->message() );
         return;
     }
@@ -395,44 +403,45 @@ sub http_delete {
 ###########################################
 sub children_by_folder_id {
 ###########################################
-    my( $self, $folder_id, $opts, $search_opts ) = @_;
+    my ( $self, $folder_id, $opts, $search_opts ) = @_;
 
     $self->init();
 
     $search_opts = {} unless defined $search_opts;
     $search_opts->{page} = 1 unless exists $search_opts->{page};
 
-    if( !defined $opts ) {
+    if ( !defined $opts ) {
         $opts = {
             maxResults => 100,
         };
     }
 
-    my $url = URI->new( $self->{ api_file_url } );
+    my $url = URI->new( $self->{api_file_url} );
     $opts->{'q'} = "'$folder_id' in parents";
 
-    if( $search_opts->{ title } ) {
-        $opts->{'q'} .= " AND title = '$search_opts->{ title }'"; # ' fix for poor editors
+    if ( $search_opts->{title} ) {
+        $opts->{'q'} .= " AND title = '$search_opts->{ title }'";    # ' fix for poor editors
     }
 
     my @children = ();
 
-    while( 1 ) {
-        $url->query_form( $opts );
+    while (1) {
+        $url->query_form($opts);
 
-        my $data = $self->http_json( $url );
+        my $data = $self->http_json($url);
 
         return unless defined $data;
 
-        my $next_item = $self->item_iterator( $data );
+        my $next_item = $self->item_iterator($data);
 
-        while( my $item = $next_item->() ) {
-            push @children, $self->data_factory( $item );
+        while ( my $item = $next_item->() ) {
+            push @children, $self->data_factory($item);
         }
 
-        if( $search_opts->{ page } and $data->{ nextPageToken } ) {
-            $opts->{ pageToken } = $data->{ nextPageToken };
-        } else {
+        if ( $search_opts->{page} and $data->{nextPageToken} ) {
+            $opts->{pageToken} = $data->{nextPageToken};
+        }
+        else {
             last;
         }
     }
@@ -443,20 +452,22 @@ sub children_by_folder_id {
 ###########################################
 sub children {
 ###########################################
-    my( $self, $path, $opts, $search_opts ) = @_;
+    my ( $self, $path, $opts, $search_opts ) = @_;
 
     DEBUG "Determine children of $path";
     LOGDIE "No $path given" unless defined $path;
 
     $search_opts = {} unless defined $search_opts;
 
-    my( $folder_id, $parent ) = $self->path_resolve( $path, $search_opts );
+    my ( $folder_id, $parent ) = $self->path_resolve( $path, $search_opts );
 
     return unless defined $folder_id;
 
     DEBUG "Getting content of folder $folder_id";
-    my $children = $self->children_by_folder_id( $folder_id, $opts,
-        $search_opts );
+    my $children = $self->children_by_folder_id(
+        $folder_id, $opts,
+        $search_opts
+    );
 
     return unless defined $children;
 
@@ -466,38 +477,39 @@ sub children {
 ###########################################
 sub search {
 ###########################################
-    my( $self, $opts, $search_opts, $query ) = @_;
-    $search_opts||= { page => 1 };
+    my ( $self, $opts, $search_opts, $query ) = @_;
+    $search_opts ||= { page => 1 };
 
     $self->init();
 
-    if( !defined $opts ) {
+    if ( !defined $opts ) {
         $opts = {
             maxResults => 100,
         };
     }
 
-    my $url = URI->new( $self->{ api_file_url } );
+    my $url = URI->new( $self->{api_file_url} );
 
     $opts->{'q'} = $query;
 
     my @children = ();
 
-    while( 1 ) {
-        $url->query_form( $opts );
+    while (1) {
+        $url->query_form($opts);
 
-        my $data = $self->http_json( $url );
+        my $data = $self->http_json($url);
         return unless defined $data;
 
-        my $next_item = $self->item_iterator( $data );
+        my $next_item = $self->item_iterator($data);
 
-        while( my $item = $next_item->() ) {
-            push @children, $self->data_factory( $item );
+        while ( my $item = $next_item->() ) {
+            push @children, $self->data_factory($item);
         }
 
-        if( $search_opts->{ page } and $data->{ nextPageToken } ) {
-            $opts->{ pageToken } = $data->{ nextPageToken };
-        } else {
+        if ( $search_opts->{page} and $data->{nextPageToken} ) {
+            $opts->{pageToken} = $data->{nextPageToken};
+        }
+        else {
             last;
         }
     }
@@ -508,47 +520,46 @@ sub search {
 ###########################################
 sub data_factory {
 ###########################################
-    my( $self, $data ) = @_;
+    my ( $self, $data ) = @_;
 
-    return Net::Google::Drive::Simple::Item->new( $data );
+    return Net::Google::Drive::Simple::Item->new($data);
 }
 
 ###########################################
 sub download {
 ###########################################
-    my( $self, $url, $local_file ) = @_;
+    my ( $self, $url, $local_file ) = @_;
 
-    if( ref $url ) {
+    if ( ref $url ) {
         $url = $url->downloadUrl();
     }
 
     my $req = HTTP::Request->new(
         GET => $url,
     );
-    $req->header( $self->{ oauth }->authorization_headers() );
+    $req->header( $self->{oauth}->authorization_headers() );
 
     my $ua = LWP::UserAgent->new();
     my $resp = $ua->request( $req, $local_file );
 
-    if( $resp->is_error() ) {
+    if ( $resp->is_error() ) {
         my $msg = "Can't download $url (" . $resp->message() . ")";
         ERROR $msg;
-        $self->error( $msg );
+        $self->error($msg);
         return;
     }
 
-    if( $local_file ) {
+    if ($local_file) {
         return 1;
     }
 
     return $resp->content();
 }
 
-
 ###########################################
 sub http_loop {
 ###########################################
-    my( $self, $req, $noinit ) = @_;
+    my ( $self, $req, $noinit ) = @_;
 
     my $ua = LWP::UserAgent->new();
     my $resp;
@@ -557,23 +568,24 @@ sub http_loop {
     my $SLEEP_INTERVAL = 10;
 
     {
-          # refresh token if necessary
-        if( ! $noinit ) {
+        # refresh token if necessary
+        if ( !$noinit ) {
             $self->init();
         }
 
         DEBUG "Fetching ", $req->url->as_string();
 
-        $resp = $ua->request( $req );
+        $resp = $ua->request($req);
 
-        if( ! $resp->is_success() ) {
+        if ( !$resp->is_success() ) {
             $self->error( $resp->message() );
             warn "Failed with ", $resp->code(), ": ", $resp->message();
-            if( --$RETRIES >= 0 ) {
+            if ( --$RETRIES >= 0 ) {
                 ERROR "Retrying in $SLEEP_INTERVAL seconds";
                 sleep $SLEEP_INTERVAL;
                 redo;
-            } else {
+            }
+            else {
                 ERROR "Out of retries.";
                 return $resp;
             }
@@ -588,27 +600,28 @@ sub http_loop {
 ###########################################
 sub http_json {
 ###########################################
-    my( $self, $url, $post_data ) = @_;
+    my ( $self, $url, $post_data ) = @_;
 
     my $req;
 
-    if( $post_data ) {
+    if ($post_data) {
         $req = &HTTP::Request::Common::POST(
             $url->as_string,
-            $self->{ oauth }->authorization_headers(),
-            "Content-Type"=> "application/json",
-            Content       => to_json( $post_data ),
+            $self->{oauth}->authorization_headers(),
+            "Content-Type" => "application/json",
+            Content        => to_json($post_data),
         );
-    } else {
-      $req = HTTP::Request->new(
-        GET => $url->as_string,
-      );
-      $req->header( $self->{ oauth }->authorization_headers() );
+    }
+    else {
+        $req = HTTP::Request->new(
+            GET => $url->as_string,
+        );
+        $req->header( $self->{oauth}->authorization_headers() );
     }
 
-    my $resp = $self->http_loop( $req );
+    my $resp = $self->http_loop($req);
 
-    if( $resp->is_error() ) {
+    if ( $resp->is_error() ) {
         $self->error( $resp->message() );
         return;
     }
@@ -621,36 +634,36 @@ sub http_json {
 ###########################################
 sub file_mime_type {
 ###########################################
-    my( $self, $file ) = @_;
+    my ( $self, $file ) = @_;
 
-      # There don't seem to be great implementations of mimetype
-      # detection on CPAN, so just use this one for now.
+    # There don't seem to be great implementations of mimetype
+    # detection on CPAN, so just use this one for now.
 
-    if( !$self->{ magic } ) {
-        $self->{ magic } =  File::MMagic->new();
+    if ( !$self->{magic} ) {
+        $self->{magic} = File::MMagic->new();
     }
 
-    return $self->{ magic }->checktype_filename( $file );
+    return $self->{magic}->checktype_filename($file);
 }
 
 ###########################################
 sub item_iterator {
 ###########################################
-    my( $self, $data ) = @_;
+    my ( $self, $data ) = @_;
 
     my $idx = 0;
 
-    if( !defined $data ) {
+    if ( !defined $data ) {
         die "no data in item_iterator";
     }
 
     return sub {
         {
-            my $next_item = $data->{ items }->[ $idx++ ];
+            my $next_item = $data->{items}->[ $idx++ ];
 
             return if !defined $next_item;
 
-            if( $next_item->{ labels }->{ trashed } ) {
+            if ( $next_item->{labels}->{trashed} ) {
                 DEBUG "Skipping $next_item->{ title } (trashed)";
                 redo;
             }
@@ -663,21 +676,21 @@ sub item_iterator {
 ###########################################
 sub file_metadata {
 ###########################################
-    my( $self, $file_id ) = @_;
+    my ( $self, $file_id ) = @_;
 
-    LOGDIE 'Deletion requires file_id' if( ! defined $file_id );
+    LOGDIE 'Deletion requires file_id' if ( !defined $file_id );
 
-    my $url = URI->new( $self->{ api_file_url } . "/$file_id" );
+    my $url = URI->new( $self->{api_file_url} . "/$file_id" );
 
     my $req = &HTTP::Request::Common::GET(
         $url->as_string,
-        $self->{ oauth }->authorization_headers(),
+        $self->{oauth}->authorization_headers(),
     );
 
-	my $ua = LWP::UserAgent->new();
-	my $resp = $ua->request( $req );
+    my $ua   = LWP::UserAgent->new();
+    my $resp = $ua->request($req);
 
-	if( $resp->is_error ) {
+    if ( $resp->is_error ) {
         $self->error( $resp->message() );
         return;
     }
@@ -708,7 +721,7 @@ Net::Google::Drive::Simple - Simple modification of Google Drive data
     my $children = $gd->children( "/" ); # or any other folder /path/location
 
     foreach my $item ( @$children ) {
-    
+
         # item is a Net::Google::Drive::Simple::Item object
 
         if ( $item->is_folder ) {

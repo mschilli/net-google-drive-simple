@@ -143,9 +143,7 @@ sub files {
         my $url = $self->file_url( $opts );
         my $data = $self->http_json( $url );
 
-        if( !defined $data ) {
-            return undef;
-        }
+        return unless defined $data;
 
         my $next_item = $self->item_iterator( $data );
 
@@ -195,9 +193,7 @@ sub file_create {
         mimeType => $mime_type,
     } );
 
-    if( ! defined $data ) {
-        return undef;
-    }
+    return unless defined $data;
 
     return $data->{ id };
 }
@@ -230,9 +226,7 @@ sub file_upload {
             }
         );
 
-        if( ! defined $data ) {
-            return undef;
-        }
+        return unless defined $data;
 
         $file_id = $data->{ id };
     }
@@ -251,7 +245,7 @@ sub file_upload {
 
     if( $resp->is_error() ) {
         $self->error( $self->message() );
-        return undef;
+        return;
     }
 
     DEBUG $resp->as_string;
@@ -300,7 +294,7 @@ sub file_mvdir {
     if( !$self->http_json( $url, { id => $file_id } ) ) {
         LOGDIE "Failed to insert $path into $target_folder.";
     }
-    
+
     return 1;
 }
 
@@ -329,9 +323,7 @@ sub path_resolve {
           { %$search_opts, title => $part },
         );
 
-        if( ! defined $children ) {
-            return undef;
-        }
+        return unless defined $children;
 
         for my $child ( @$children ) {
             DEBUG "Found child ", $child->title();
@@ -347,7 +339,7 @@ sub path_resolve {
         my $msg = "Child $part not found";
         $self->error( $msg );
         ERROR $msg;
-        return undef;
+        return;
     }
 
     if( @ids == 1 ) {
@@ -373,7 +365,7 @@ sub file_delete {
         return $file_id;
     }
 
-    return undef;
+    return;
 }
 
 ###########################################
@@ -392,7 +384,7 @@ sub http_delete {
 
     if( $resp->is_error ) {
         $self->error( $resp->message() );
-        return undef;
+        return;
     }
 
     return 1;
@@ -405,14 +397,8 @@ sub children_by_folder_id {
 
     $self->init();
 
-    if( !defined $search_opts ) {
-        $search_opts = {};
-    }
-
-    $search_opts = {
-        page => 1,
-        %$search_opts,
-    };
+    $search_opts = {} unless defined $search_opts;
+    $search_opts->{page} = 1 unless exists $search_opts->{page};
 
     if( !defined $opts ) {
         $opts = {
@@ -421,10 +407,10 @@ sub children_by_folder_id {
     }
 
     my $url = URI->new( $self->{ api_file_url } );
-    $opts->{ q } = "'$folder_id' in parents";
+    $opts->{'q'} = "'$folder_id' in parents";
 
     if( $search_opts->{ title } ) {
-        $opts->{ q } .= " AND title = '$search_opts->{ title }'"; # ' fix for poor editors
+        $opts->{'q'} .= " AND title = '$search_opts->{ title }'"; # ' fix for poor editors
     }
 
     my @children = ();
@@ -434,9 +420,7 @@ sub children_by_folder_id {
 
         my $data = $self->http_json( $url );
 
-        if( ! defined $data ) {
-            return undef;
-        }
+        return unless defined $data;
 
         my $next_item = $self->item_iterator( $data );
 
@@ -501,9 +485,7 @@ sub search {
         $url->query_form( $opts );
 
         my $data = $self->http_json( $url );
-        if( ! defined $data ) {
-            return undef;
-        }
+        return unless defined $data;
 
         my $next_item = $self->item_iterator( $data );
 
@@ -557,7 +539,7 @@ sub download {
         my $msg = "Can't download $url (" . $resp->message() . ")";
         ERROR $msg;
         $self->error( $msg );
-        return undef;
+        return;
     }
 
     if( $local_file ) {
@@ -633,7 +615,7 @@ sub http_json {
 
     if( $resp->is_error() ) {
         $self->error( $resp->message() );
-        return undef;
+        return;
     }
 
     my $data = from_json( $resp->content() );
@@ -702,7 +684,7 @@ sub file_metadata {
 
 	if( $resp->is_error ) {
         $self->error( $resp->message() );
-        return undef;
+        return;
     }
 
     my $data = from_json( $resp->content() );
@@ -937,8 +919,8 @@ Delete the file with the specified ID from Google Drive.
 
 =item C<$gd-E<gt>drive_mvdir( "/gdrive/path/to/file", "/path/to/new/folder" )>
 
-Move an existing file to a new folder. Removes the file's "parent" 
-setting (pointing to the old folder) and then adds the new folder as a 
+Move an existing file to a new folder. Removes the file's "parent"
+setting (pointing to the old folder) and then adds the new folder as a
 new parent.
 
 =item C<my $metadata_hash_ref = $gd-E<gt>file_metadata( file_id )>

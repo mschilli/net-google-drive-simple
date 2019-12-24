@@ -29,6 +29,13 @@ WriteMakefile(
       'Sysadm::Install'      => '0.43',
       'YAML'                 => '0.71',
     }, # e.g., Module::Name => 1.1
+    'TEST_REQUIRES' => {
+      "Test2::Bundle::Extended"   => "0",
+      "Test2::Tools::Explain"     => "0",
+      "Test2::Plugin::NoWarnings" => "0",
+      "File::Temp"                => "0",
+      "Test::MockModule"          => "v0.171.0",
+    },
     EXE_FILES                => ["eg/google-drive-init"],
     $ExtUtils::MakeMaker::VERSION >= 6.50 ? (%$meta_merge) : (),
     ($] >= 5.005 ?    ## Add these new keywords supported since 5.005

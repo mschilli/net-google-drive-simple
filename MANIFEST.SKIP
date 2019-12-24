@@ -9,3 +9,4 @@ adm/release
 .gz$
 MYMETA.json
 MYMETA.yml
+^samples/

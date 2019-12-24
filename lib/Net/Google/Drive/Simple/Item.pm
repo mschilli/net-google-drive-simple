@@ -17,6 +17,7 @@ sub is_folder {
     my ($self) = @_;
 
     my $mimeType = $self->mimeType;
+    $mimeType = '' unless defined $mimeType;
     return $mimeType eq 'application/vnd.google-apps.folder' ? 1 : 0;
 }
 
@@ -36,7 +37,7 @@ sub AUTOLOAD {
     my $data = $self->{data};
     die unless $data && ref $data;
 
-    return $data->{$key} if defined $data->{$key};
+    return $data->{$key} if exists $data->{$key};
 
     # catching typos :-)
     my $lc_key = lc $key;

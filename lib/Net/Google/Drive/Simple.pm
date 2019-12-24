@@ -1,6 +1,7 @@
 ###########################################
 package Net::Google::Drive::Simple;
 ###########################################
+
 use strict;
 use warnings;
 
@@ -12,11 +13,12 @@ use Sysadm::Install qw( slurp );
 use File::Basename;
 use YAML qw( LoadFile DumpFile );
 use JSON qw( from_json to_json );
-use Test::MockObject;
 use Log::Log4perl qw(:easy);
 use Data::Dumper;
 use File::MMagic;
 use OAuth::Cmdline::GoogleDrive;
+
+use Net::Google::Drive::Simple::Item;
 
 our $VERSION = "0.14";
 
@@ -508,14 +510,7 @@ sub data_factory {
 ###########################################
     my( $self, $data ) = @_;
 
-    my $mock = Test::MockObject->new();
-
-    for my $key ( keys %$data ) {
-        # DEBUG "Adding method $key";
-        $mock->mock( $key , sub { $data->{ $key } } );
-    }
-
-    return $mock;
+    return Net::Google::Drive::Simple::Item->new( $data );
 }
 
 ###########################################
@@ -703,24 +698,25 @@ Net::Google::Drive::Simple - Simple modification of Google Drive data
 
 =head1 SYNOPSIS
 
+    use feature 'say';
     use Net::Google::Drive::Simple;
 
-      # requires a ~/.google-drive.yml file with an access token,
-      # see description below.
+    # requires a ~/.google-drive.yml file with an access token,
+    # see description below.
     my $gd = Net::Google::Drive::Simple->new();
 
-    my $children = $gd->children( "/folder/path" );
+    my $children = $gd->children( "/" ); # or any other folder /path/location
 
-    for my $child ( @$children ) {
+    foreach my $item ( @$children ) {
+    
+        # item is a Net::Google::Drive::Simple::Item object
 
-        next if $child->kind() ne 'drive#file';
-
-        next if !$child->can( "downloadUrl" );
-
-        print $child->originalFilename(),
-              " can be downloaded at ",
-              $child->downloadUrl(),
-              "\n";
+        if ( $item->is_folder ) {
+             say "** ", $child->title, " is a folder";
+        } else {
+             say $item->title, " is a file " . $child->mimeType;
+             say $item->originalFilename(), " can be downloaded at ", $child->downloadUrl();
+        }
     }
 
 =head1 DESCRIPTION
@@ -953,4 +949,5 @@ modify it under the same terms as Perl itself.
 
 =head1 AUTHOR
 
+2019, Nicolas R. <cpan@atoomic.org>
 2012-2019, Mike Schilli <cpan@perlmeister.com>

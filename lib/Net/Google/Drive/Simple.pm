@@ -150,7 +150,8 @@ sub files {
         my $next_item = $self->item_iterator( $data );
 
         while( my $item = $next_item->() ) {
-          if( $item->{ kind } eq "drive#file" ) {
+
+        if( $item->{ kind } eq "drive#file" ) {
             my $file = $item->{ originalFilename };
             if( !defined $file ) {
                 DEBUG "Skipping $item->{ title } (no originalFilename)";
@@ -423,7 +424,7 @@ sub children_by_folder_id {
     $opts->{ q } = "'$folder_id' in parents";
 
     if( $search_opts->{ title } ) {
-        $opts->{ q } .= " AND title = '$search_opts->{ title }'";
+        $opts->{ q } .= " AND title = '$search_opts->{ title }'"; # ' fix for poor editors
     }
 
     my @children = ();
@@ -506,7 +507,7 @@ sub search {
 
     my $url = URI->new( $self->{ api_file_url } );
 
-    $opts->{ q }= $query;
+    $opts->{'q'} = $query;
 
     my @children = ();
 

@@ -13,4 +13,4 @@ MYMETA.yml
 .DS_Store
 .travis.yml
 cpanfile
-README.pod
+README.md

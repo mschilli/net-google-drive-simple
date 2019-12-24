@@ -460,35 +460,21 @@ sub children {
     my( $self, $path, $opts, $search_opts ) = @_;
 
     DEBUG "Determine children of $path";
+    LOGDIE "No $path given" unless defined $path;
 
-    if( !defined $path ) {
-        LOGDIE "No $path given";
-    }
-
-    if( !defined $search_opts ) {
-        $search_opts = {};
-    }
+    $search_opts = {} unless defined $search_opts;
 
     my( $folder_id, $parent ) = $self->path_resolve( $path, $search_opts );
 
-    if( !defined $folder_id ) {
-        return undef;
-    }
+    return unless defined $folder_id;
 
     DEBUG "Getting content of folder $folder_id";
-
     my $children = $self->children_by_folder_id( $folder_id, $opts,
         $search_opts );
 
-    if( ! defined $children ) {
-        return undef;
-    }
+    return unless defined $children;
 
-    if( wantarray ) {
-        return( $children, $folder_id );
-    } else {
-        return $children;
-    }
+    return wantarray ? ( $children, $folder_id ) : $children;
 }
 
 ###########################################

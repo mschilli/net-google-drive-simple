@@ -10,3 +10,7 @@ adm/release
 MYMETA.json
 MYMETA.yml
 ^samples/
+.DS_Store
+.travis.yml
+cpanfile
+README.pod

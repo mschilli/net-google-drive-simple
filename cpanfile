@@ -11,3 +11,10 @@ requires 'OAuth::Cmdline'       => '0.0';
 requires 'Pod::Usage'           => '>= 1.36';
 requires 'Sysadm::Install'      => '>= 0.43';
 requires 'YAML'                 => '>= 0.71';
+
+on "test" => sub {
+    requires "Test2::Bundle::Extended"   => "0";
+    requires "Test2::Tools::Explain"     => "0";
+    requires "Test2::Plugin::NoWarnings" => "0";
+    requires "File::Temp"                => "0";
+};

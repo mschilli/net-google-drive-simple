@@ -1,6 +1,9 @@
 ######################################################################
 Revision history for Perl extension Net::Google::Drive::Simple
 
+0.16 (2019/12/25)
+        * Fix synopsis
+
 0.15 (2019/12/24)
         * Introduce Google::Drive::Simple::Item to speedup objects
         and provide additional helpers 'is_folder' and 'is_file'

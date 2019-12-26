@@ -79,13 +79,15 @@ Net::Google::Drive::Simple::Item - Representation of a Google Drive File
     my $children = $gd->children( "/" ); # or any other folder /path/location
 
     foreach my $item ( @$children ) {
-        # $item is a Net::Google::Drive::Simple::Item object
+        # $item is one Net::Google::Drive::Simple::Item object
 
         if ( $item->is_folder ) {
-             say "** ", $child->title, " is a folder";
+            say "** ", $item->title, " is a folder";
         } else {
-             say $item->title, " is a file " . $child->mimeType;
-             say $item->originalFilename(), " can be downloaded at ", $child->downloadUrl();
+            say $item->title, " is a file ", $item->mimeType;
+            eval { # originalFilename not necessary available for all files
+               say $item->originalFilename(), " can be downloaded at ", $item->downloadUrl();
+            };
         }
     }
 

@@ -263,6 +263,45 @@ sub file_upload {
 }
 
 ###########################################
+sub rename {
+###########################################
+    my ( $self, $file_id, $new_name ) = @_;
+
+    my $url = URI->new( $self->{api_file_url} . "/$file_id" );
+
+    my $req = &HTTP::Request::Common::PUT(
+        $url->as_string,
+        $self->{oauth}->authorization_headers(),
+        "Accept"       => "application/json",
+        "Content-Type" => "application/json",
+        Content        => to_json({title=> $new_name}),
+    );
+
+    my $RETRIES        = 3;
+    my $SLEEP_INTERVAL = 10;
+
+    my $ua = LWP::UserAgent->new();
+    my $resp = $ua->request($req);
+
+    if ( !$resp->is_success() ) {
+        $self->error( $resp->message() );
+        warn "Failed with ", $resp->code(), ": ", $resp->message();
+        if ( --$RETRIES >= 0 ) {
+            ERROR "Retrying in $SLEEP_INTERVAL seconds";
+            sleep $SLEEP_INTERVAL;
+            redo;
+        }
+        else {
+            ERROR "Out of retries.";
+            return $resp;
+        }
+       }
+
+    return $resp;
+
+}
+
+###########################################
 sub file_mvdir {
 ###########################################
     my ( $self, $path, $target_folder ) = @_;
@@ -863,6 +902,10 @@ To overwrite an existing file on Google Drive, specify the file's ID as
 an optional parameter:
 
     $gd->file_upload( $file, $dir_id, $file_id );
+
+=item C<$gd-E<gt>rename( $file_id, $name )>
+
+Renames the file or folder with C<$file_id> to the specified C<$name>.
 
 =item C<$gd-E<gt>download( $item, [$local_filename] )>
 

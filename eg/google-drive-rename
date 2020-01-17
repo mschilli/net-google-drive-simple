@@ -1,8 +1,6 @@
 #!/usr/bin/perl
 use strict;
 
-use feature ':5.28';
-
 use Log::Log4perl qw(:easy);
 use Pod::Usage;
 use Data::Dumper::Concise;

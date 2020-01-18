@@ -28,7 +28,7 @@ __END__
 
 =head1 NAME
 
-    gd-rename - Rename a file on Google Drive
+    google-drive-rename - Rename a file on Google Drive
 
 =head1 SYNOPSIS
 

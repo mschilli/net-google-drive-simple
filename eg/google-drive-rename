@@ -16,8 +16,7 @@ if( ! $new_name ) {
     pod2usage( "What name should the file or folder be renamed to?" );
 }
 
-#Log::Log4perl->easy_init( $INFO );
-Log::Log4perl->easy_init( $DEBUG );
+Log::Log4perl->easy_init( $INFO );
 
 my $gd = Net::Google::Drive::Simple->new();
 

@@ -283,6 +283,7 @@ sub rename {
     my $ua = LWP::UserAgent->new();
     my $resp = $ua->request($req);
 
+    {
     if ( !$resp->is_success() ) {
         $self->error( $resp->message() );
         warn "Failed with ", $resp->code(), ": ", $resp->message();
@@ -293,11 +294,12 @@ sub rename {
         }
         else {
             ERROR "Out of retries.";
-            return $resp;
+            return ;
         }
-       }
+    }
+    }
 
-    return $resp;
+    return 1 ;
 
 }
 

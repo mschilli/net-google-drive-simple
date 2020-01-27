@@ -243,23 +243,10 @@ sub file_upload {
     $url = URI->new( $self->{api_upload_url} . "/$file_id" );
     $url->query_form( uploadType => "media" );
 
-    my $req = &HTTP::Request::Common::PUT(
-        $url->as_string,
-        $self->{oauth}->authorization_headers(),
-        "Content-Type" => $mime_type,
-        Content        => $file_data,
-    );
-
-    my $resp = $self->http_loop($req);
-
-    if ( $resp->is_error() ) {
-        $self->error( $self->message() );
-        return;
+    if ( $self->http_put($url, {"Content-Type" => $mime_type,
+				Content => $file_data,} ) ) {
+	return $file_id;
     }
-
-    DEBUG $resp->as_string;
-
-    return $file_id;
 }
 
 ###########################################
@@ -269,38 +256,34 @@ sub rename {
 
     my $url = URI->new( $self->{api_file_url} . "/$file_id" );
 
+    if ( $self->http_put($url, {"Accept" => "application/json",
+				"Content-Type" => "application/json",
+				Content => to_json({title=> $new_name}),} ) ) {
+        return 1 ;
+    }
+    return ;
+
+}
+
+###########################################
+sub http_put {
+###########################################
+    my ( $self, $url, $body ) = @_;
+
     my $req = &HTTP::Request::Common::PUT(
         $url->as_string,
         $self->{oauth}->authorization_headers(),
-        "Accept"       => "application/json",
-        "Content-Type" => "application/json",
-        Content        => to_json({title=> $new_name}),
+	%$body,
     );
 
-    my $RETRIES        = 3;
-    my $SLEEP_INTERVAL = 10;
+    my $resp = $self->http_loop($req);
 
-    my $ua = LWP::UserAgent->new();
-    my $resp = $ua->request($req);
-
-    {
-    if ( !$resp->is_success() ) {
+    if ( $resp->is_error ) {
         $self->error( $resp->message() );
-        warn "Failed with ", $resp->code(), ": ", $resp->message();
-        if ( --$RETRIES >= 0 ) {
-            ERROR "Retrying in $SLEEP_INTERVAL seconds";
-            sleep $SLEEP_INTERVAL;
-            redo;
-        }
-        else {
-            ERROR "Out of retries.";
-            return ;
-        }
+        return;
     }
-    }
-
-    return 1 ;
-
+    DEBUG $resp->as_string;
+    return $resp;
 }
 
 ###########################################
@@ -620,7 +603,7 @@ sub http_loop {
 
         if ( !$resp->is_success() ) {
             $self->error( $resp->message() );
-            warn "Failed with ", $resp->code(), ": ", $resp->message();
+            warn "Failed with ", $resp->code(), ": ", $resp->message(), "\n";
             if ( --$RETRIES >= 0 ) {
                 ERROR "Retrying in $SLEEP_INTERVAL seconds";
                 sleep $SLEEP_INTERVAL;

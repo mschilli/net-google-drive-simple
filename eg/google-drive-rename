@@ -21,7 +21,7 @@ Log::Log4perl->easy_init( $INFO );
 my $gd = Net::Google::Drive::Simple->new();
 
 $gd->rename ( $file_id, $new_name ) or
-    LOGDIE "Rename failed: $!";
+    LOGDIE "Rename failed.\n";
 
 __END__
 

@@ -21,9 +21,9 @@ jobs:
        PERL_CARTON_PATH: $GITHUB_WORKSPACE/local
 
     strategy:
+      fail-fast: false
       matrix:
         perl-version:
-          - 'latest'
           - '5.30'
           - '5.28'
           - '5.26'
@@ -37,14 +37,14 @@ jobs:
           - '5.10'
 
     container:
-      image: perl:${{ matrix.perl-version }}
+      image: perldocker/perl-tester:${{ matrix.perl-version }}
 
     steps:
       - uses: actions/checkout@v1
       - name: perl -V
         run: perl -V
       - name: Install Dependencies
-        run: curl -sL https://git.io/cpm | perl - install -g --no-test --without-recommends --show-build-log-on-failure
+        run: cpm install -g --show-build-log-on-failure
       - name: perl Makefile.PL
         run: perl Makefile.PL
       - name: make

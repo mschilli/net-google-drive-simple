@@ -155,6 +155,10 @@ transparently when the old one is about to expire.
 
         $gd->file_upload( $file, $dir_id, $file_id );
 
+- `$gd->rename( $file_id, $name  )`
+
+    Renames the file or folder with `$file_id` to the specified `$name`.
+
 - `$gd->download( $item, [$local_filename] )`
 
     Downloads an item found via `files()` or `children()`. Also accepts

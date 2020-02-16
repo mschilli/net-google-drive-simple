@@ -336,12 +336,11 @@ sub path_resolve {
 
     $search_opts = {} if !defined $search_opts;
 
-    my @parts  = split '/', $path;
+    my @parts  = grep { $_ ne '' } split '/', $path;
     my @ids    = ();
-    my $parent = $parts[0] = "root";
+    my $folder_id = my $parent = "root";
     DEBUG "Parent: $parent";
 
-    my $folder_id = shift @parts;
     push @ids, $folder_id;
 
   PART: for my $part (@parts) {

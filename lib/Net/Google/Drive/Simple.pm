@@ -337,11 +337,10 @@ sub path_resolve {
     $search_opts = {} if !defined $search_opts;
 
     my @parts  = grep { $_ ne '' } split '/', $path;
-    my @ids    = ();
+
+    my @ids    = qw(root);
     my $folder_id = my $parent = "root";
     DEBUG "Parent: $parent";
-
-    push @ids, $folder_id;
 
   PART: for my $part (@parts) {
 

@@ -552,6 +552,8 @@ sub download {
 ###########################################
     my ( $self, $url, $local_file ) = @_;
 
+    $self->init();
+
     if ( ref $url ) {
         $url = $url->downloadUrl();
     }

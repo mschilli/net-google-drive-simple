@@ -17,6 +17,7 @@ WriteMakefile(
     'NAME'         => 'Net::Google::Drive::Simple',
     'VERSION_FROM' => 'lib/Net/Google/Drive/Simple.pm', # finds $VERSION
     'LICENSE'      => 'perl',
+    'MIN_PERL_VERSION' => '5.016',
     'PREREQ_PM'    => {
       'Crypt::SSLeay'        => '0.72',
       'File::MMagic'         => '1.29',

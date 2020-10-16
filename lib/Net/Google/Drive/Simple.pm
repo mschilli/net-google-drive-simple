@@ -441,8 +441,9 @@ sub children_by_folder_id {
     my $url = URI->new( $self->{api_file_url} );
     $opts->{'q'} = "'$folder_id' in parents";
 
-    if ( $search_opts->{title} ) {
-        $opts->{'q'} .= " AND title = '$search_opts->{ title }'";    # ' fix for poor editors
+    if ( my $title = $search_opts->{ title } ) {
+        $title =~ s|\'|\\\'|g;
+        $opts->{ q } .= " AND title = '$title'";
     }
 
     my @children = ();

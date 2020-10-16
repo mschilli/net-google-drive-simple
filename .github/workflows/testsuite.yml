@@ -20,10 +20,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: install perl-doc
-        run: |
-          sudo apt-get clean
-          sudo apt-get install -y perl-doc perl-doc-html
       - name: perl -V
         run: perl -V
       - name: Install dependencies

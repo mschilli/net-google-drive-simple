@@ -9,13 +9,14 @@ use LWP::UserAgent;
 use HTTP::Request;
 use HTTP::Headers;
 use HTTP::Request::Common;
-use Sysadm::Install qw( slurp );
 use File::Basename;
 use YAML qw( LoadFile DumpFile );
 use JSON qw( from_json to_json );
 use Log::Log4perl qw(:easy);
-use Data::Dumper;
 use File::MMagic;
+use IO::File;
+use File::stat;
+use OAuth::Cmdline::CustomFile;
 use OAuth::Cmdline::GoogleDrive;
 
 use Net::Google::Drive::Simple::Item;
@@ -27,11 +28,20 @@ sub new {
 ###########################################
     my ( $class, %options ) = @_;
 
+    my $oauth;
+
+    if ( exists $options{custom_file} ) {
+        $oauth = OAuth::Cmdline::CustomFile->new( custom_file => $options{custom_file} );
+    }
+    else {
+        $oauth = OAuth::Cmdline::GoogleDrive->new( );
+    }
+
     my $self = {
         init_done      => undef,
         api_file_url   => "https://www.googleapis.com/drive/v2/files",
         api_upload_url => "https://www.googleapis.com/upload/drive/v2/files",
-        oauth          => OAuth::Cmdline::GoogleDrive->new(),
+        oauth           => $oauth,
         error          => undef,
         %options,
     };
@@ -208,7 +218,9 @@ sub file_create {
 ###########################################
 sub file_upload {
 ###########################################
-    my ( $self, $file, $parent_id, $file_id ) = @_;
+    my ( $self, $file, $parent_id, $file_id, $opts ) = @_;
+
+    $opts = {} if !defined $opts;
 
     # Since a file upload can take a long time, refresh the token
     # just in case.
@@ -218,7 +230,6 @@ sub file_upload {
 
     # First, insert the file placeholder, according to
     # http://stackoverflow.com/questions/10317638
-    my $file_data = slurp $file;
     my $mime_type = $self->file_mime_type($file);
 
     my $url;
@@ -231,7 +242,8 @@ sub file_upload {
             {
                 mimeType => $mime_type,
                 parents  => [ { id => $parent_id } ],
-                title    => $title,
+                title       => $opts->{ title } ? $opts->{ title } : $title,
+                description => $opts->{ description },
             }
         );
 
@@ -243,8 +255,12 @@ sub file_upload {
     $url = URI->new( $self->{api_upload_url} . "/$file_id" );
     $url->query_form( uploadType => "media" );
 
+    my $file_length = -s $file;
+    my $file_data = _content_sub($file);
+
     if ( $self->http_put($url, {"Content-Type" => $mime_type,
-				Content => $file_data,} ) ) {
+				Content => $file_data,
+                'Content-Length' => $file_length} ) ) {
 	return $file_id;
     }
 }
@@ -723,6 +739,47 @@ sub file_metadata {
 
     # return $self->data_factory( $data );
     return $data;
+}
+
+###########################################
+sub _content_sub {
+###########################################
+    my $filename  = shift;
+    my $stat      = stat($filename);
+    my $remaining = $stat->size;
+    my $blksize   = $stat->blksize || 4096;
+
+    die "$filename not a readable file with fixed size"
+      unless -r $filename
+          and $remaining;
+
+    my $fh = IO::File->new($filename, 'r')
+      or die "Could not open $filename: $!";
+    $fh->binmode;
+
+    return sub {
+        my $buffer;
+
+        # upon retries the file is closed and we must reopen it
+        unless ($fh->opened) {
+            $fh = IO::File->new($filename, 'r')
+              or die "Could not open $filename: $!";
+            $fh->binmode;
+            $remaining = $stat->size;
+        }
+
+        unless (my $read = $fh->read($buffer, $blksize)) {
+            die
+              "Error while reading upload content $filename ($remaining remaining) $!"
+              if $! and $remaining;
+            $fh->close    # otherwise, we found EOF
+              or die "close of upload content $filename failed: $!";
+            $buffer
+              ||= '';  # LWP expects an empty string on finish, read returns 0
+        }
+        $remaining -= length($buffer);
+        return $buffer;
+    };
 }
 
 1;

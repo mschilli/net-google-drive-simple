@@ -32,15 +32,12 @@ jobs:
           - '5.20'
           - '5.18'
           - '5.16'
-          - '5.14'
-          - '5.12'
-          - '5.10'
 
     container:
       image: perldocker/perl-tester:${{ matrix.perl-version }}
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: perl -V
         run: perl -V
       - name: Install Dependencies

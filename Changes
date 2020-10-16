@@ -3,6 +3,8 @@ Revision history for Perl extension Net::Google::Drive::Simple
 
 {{$NEXT}}
 
+0.18      2020-10-16
+
 - Escape single quotes in file and folder names
 - Bump min Perl version to 5.016 (Mojolicious requirement)
 - Switch distro to Dist::Zilla

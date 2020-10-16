@@ -243,9 +243,16 @@ sub file_upload {
     $url = URI->new( $self->{api_upload_url} . "/$file_id" );
     $url->query_form( uploadType => "media" );
 
-    if ( $self->http_put($url, {"Content-Type" => $mime_type,
-				Content => $file_data,} ) ) {
-	return $file_id;
+    if (
+        $self->http_put(
+            $url,
+            {
+                "Content-Type" => $mime_type,
+                Content        => $file_data,
+            }
+        )
+    ) {
+        return $file_id;
     }
 }
 
@@ -256,12 +263,19 @@ sub rename {
 
     my $url = URI->new( $self->{api_file_url} . "/$file_id" );
 
-    if ( $self->http_put($url, {"Accept" => "application/json",
-				"Content-Type" => "application/json",
-				Content => to_json({title=> $new_name}),} ) ) {
-        return 1 ;
+    if (
+        $self->http_put(
+            $url,
+            {
+                "Accept"       => "application/json",
+                "Content-Type" => "application/json",
+                Content        => to_json( { title => $new_name } ),
+            }
+        )
+    ) {
+        return 1;
     }
-    return ;
+    return;
 
 }
 
@@ -273,7 +287,7 @@ sub http_put {
     my $req = &HTTP::Request::Common::PUT(
         $url->as_string,
         $self->{oauth}->authorization_headers(),
-	%$body,
+        %$body,
     );
 
     my $resp = $self->http_loop($req);
@@ -336,9 +350,9 @@ sub path_resolve {
 
     $search_opts = {} if !defined $search_opts;
 
-    my @parts  = grep { $_ ne '' } split '/', $path;
+    my @parts = grep { $_ ne '' } split '/', $path;
 
-    my @ids    = qw(root);
+    my @ids       = qw(root);
     my $folder_id = my $parent = "root";
     DEBUG "Parent: $parent";
 
@@ -441,9 +455,9 @@ sub children_by_folder_id {
     my $url = URI->new( $self->{api_file_url} );
     $opts->{'q'} = "'$folder_id' in parents";
 
-    if ( my $title = $search_opts->{ title } ) {
+    if ( my $title = $search_opts->{title} ) {
         $title =~ s|\'|\\\'|g;
-        $opts->{ q } .= " AND title = '$title'";
+        $opts->{q} .= " AND title = '$title'";
     }
 
     my @children = ();
@@ -564,7 +578,7 @@ sub download {
     );
     $req->header( $self->{oauth}->authorization_headers() );
 
-    my $ua = LWP::UserAgent->new();
+    my $ua   = LWP::UserAgent->new();
     my $resp = $ua->request( $req, $local_file );
 
     if ( $resp->is_error() ) {
@@ -966,6 +980,38 @@ new parent.
 =item C<my $metadata_hash_ref = $gd-E<gt>file_metadata( file_id )>
 
 Return metadata about the file with the specified ID from Google Drive.
+
+=item C<api_test>
+
+Used at init time to check that the connection is correct.
+
+=item C<children_by_folder_id>
+
+=item C<data_factory>
+
+=item C<error>
+
+=item C<file_mime_type>
+
+=item C<file_mvdir>
+
+=item C<file_url>
+
+=item C<http_delete>
+
+=item C<http_json>
+
+=item C<http_loop>
+
+=item C<http_put>
+
+=item C<init>
+
+Internal initialization to setup the connection.
+
+=item C<item_iterator>
+
+=item C<path_resolve>
 
 =back
 

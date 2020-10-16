@@ -1,6 +1,8 @@
 ######################################################################
 Revision history for Perl extension Net::Google::Drive::Simple
 
+{{$NEXT}}
+
 0.17 (2020/01/31)
         * Add 'rename' support to rename files or folder
         (implemented by Andy Bircumshaw )

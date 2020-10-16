@@ -7,3 +7,5 @@ blib
 pm_to_blib
 .DS_Store
 *.tar.gz
+Net-Google-Drive-Simple-*
+.build

@@ -141,13 +141,10 @@ sub files {
     while (1) {
         my $url  = $self->file_url($opts);
         my $data = $self->http_json($url);
-
         return unless defined $data;
-
         my $next_item = $self->item_iterator($data);
 
         while ( my $item = $next_item->() ) {
-
             if ( $item->{kind} eq "drive#file" ) {
                 my $file = $item->{originalFilename};
                 if ( !defined $file ) {
@@ -420,7 +417,7 @@ sub http_delete {
 ###########################################
     my ( $self, $url ) = @_;
 
-    my $req = HTTP::Request(
+    my $req = HTTP::Request->new(
         'DELETE',
         $url,
         [ $self->{oauth}->authorization_headers() ],
@@ -468,7 +465,6 @@ sub children_by_folder_id {
         $url->query_form($opts);
 
         my $data = $self->http_json($url);
-
         return unless defined $data;
 
         my $next_item = $self->item_iterator($data);
@@ -648,7 +644,7 @@ sub http_json {
     my $content;
     if ($post_data) {
         $verb = 'POST';
-        push @headers, "Content-Type", "application/json",
+        push @headers, "Content-Type", "application/json";
         $content = to_json($post_data);
     }
     my $req = HTTP::Request->new(
@@ -721,16 +717,16 @@ sub file_metadata {
 
     my $url = URI->new( $self->{api_file_url} . "/$file_id" );
 
-    return http_json($url->as_string);
+    return $self->http_json($url);
 }
 
 ###########################################
 sub _content_sub {
 ###########################################
     my $filename  = shift;
-    my $stat      = stat($filename);
-    my $remaining = $stat->size;
-    my $blksize   = $stat->blksize || 4096;
+    my @stat      = stat $filename;
+    my $remaining = $stat[7];
+    my $blksize   = $stat[11] || 4096;
 
     die "$filename not a readable file with fixed size"
       unless -r $filename
@@ -748,7 +744,7 @@ sub _content_sub {
             $fh = IO::File->new($filename, 'r')
               or die "Could not open $filename: $!";
             $fh->binmode;
-            $remaining = $stat->size;
+            $remaining = $stat[7];
         }
 
         unless (my $read = $fh->read($buffer, $blksize)) {

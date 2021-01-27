@@ -8,13 +8,11 @@ use warnings;
 use LWP::UserAgent;
 use HTTP::Request;
 use HTTP::Headers;
-use HTTP::Request::Common;
 use Sysadm::Install qw( slurp );
 use File::Basename;
 use YAML qw( LoadFile DumpFile );
 use JSON qw( from_json to_json );
 use Log::Log4perl qw(:easy);
-use Data::Dumper;
 use File::MMagic;
 use OAuth::Cmdline::GoogleDrive;
 
@@ -284,9 +282,10 @@ sub http_put {
 ###########################################
     my ( $self, $url, $body ) = @_;
 
-    my $req = &HTTP::Request::Common::PUT(
+    my $req = HTTP::Request->new(
+		'PUT',
         $url->as_string,
-        $self->{oauth}->authorization_headers(),
+        [ $self->{oauth}->authorization_headers() ],
         %$body,
     );
 
@@ -419,9 +418,10 @@ sub http_delete {
 ###########################################
     my ( $self, $url ) = @_;
 
-    my $req = &HTTP::Request::Common::DELETE(
+    my $req = HTTP::Request(
+        'DELETE',
         $url,
-        $self->{oauth}->authorization_headers(),
+        [ $self->{oauth}->authorization_headers() ],
     );
 
     my $resp = $self->http_loop($req);
@@ -641,22 +641,20 @@ sub http_json {
 ###########################################
     my ( $self, $url, $post_data ) = @_;
 
-    my $req;
-
+    my @headers = ( $self->{'oauth'}->authorization_headers() );
+    my $verb = 'GET';
+    my $content;
     if ($post_data) {
-        $req = &HTTP::Request::Common::POST(
-            $url->as_string,
-            $self->{oauth}->authorization_headers(),
-            "Content-Type" => "application/json",
-            Content        => to_json($post_data),
-        );
+        $verb = 'POST';
+        push @headers, "Content-Type", "application/json",
+        $content = to_json($post_data);
     }
-    else {
-        $req = HTTP::Request->new(
-            GET => $url->as_string,
-        );
-        $req->header( $self->{oauth}->authorization_headers() );
-    }
+    my $req = HTTP::Request->new(
+        $verb,
+        $url->as_string(),
+        \@headers,
+        $content,
+    );
 
     my $resp = $self->http_loop($req);
 
@@ -721,23 +719,7 @@ sub file_metadata {
 
     my $url = URI->new( $self->{api_file_url} . "/$file_id" );
 
-    my $req = &HTTP::Request::Common::GET(
-        $url->as_string,
-        $self->{oauth}->authorization_headers(),
-    );
-
-    my $ua   = LWP::UserAgent->new();
-    my $resp = $ua->request($req);
-
-    if ( $resp->is_error ) {
-        $self->error( $resp->message() );
-        return;
-    }
-
-    my $data = from_json( $resp->content() );
-
-    # return $self->data_factory( $data );
-    return $data;
+    return http_json($url->as_string);
 }
 
 1;

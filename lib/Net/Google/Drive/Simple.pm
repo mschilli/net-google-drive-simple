@@ -8,7 +8,6 @@ use warnings;
 use LWP::UserAgent;
 use HTTP::Request;
 use HTTP::Headers;
-use Sysadm::Install qw( slurp );
 use File::Basename;
 use YAML qw( LoadFile DumpFile );
 use JSON qw( from_json to_json );
@@ -216,7 +215,6 @@ sub file_upload {
 
     # First, insert the file placeholder, according to
     # http://stackoverflow.com/questions/10317638
-    my $file_data = slurp $file;
     my $mime_type = $self->file_mime_type($file);
 
     my $url;
@@ -241,12 +239,16 @@ sub file_upload {
     $url = URI->new( $self->{api_upload_url} . "/$file_id" );
     $url->query_form( uploadType => "media" );
 
+    my $file_length = -s $file;
+    my $file_data = _content_sub($file);
+
     if (
         $self->http_put(
             $url,
             {
-                "Content-Type" => $mime_type,
-                Content        => $file_data,
+                'Content-Type'   => $mime_type,
+                'Content'        => $file_data,
+                'Content-Length' => $file_length
             }
         )
     ) {
@@ -720,6 +722,47 @@ sub file_metadata {
     my $url = URI->new( $self->{api_file_url} . "/$file_id" );
 
     return http_json($url->as_string);
+}
+
+###########################################
+sub _content_sub {
+###########################################
+    my $filename  = shift;
+    my $stat      = stat($filename);
+    my $remaining = $stat->size;
+    my $blksize   = $stat->blksize || 4096;
+
+    die "$filename not a readable file with fixed size"
+      unless -r $filename
+          and $remaining;
+
+    my $fh = IO::File->new($filename, 'r')
+      or die "Could not open $filename: $!";
+    $fh->binmode;
+
+    return sub {
+        my $buffer;
+
+        # upon retries the file is closed and we must reopen it
+        unless ($fh->opened) {
+            $fh = IO::File->new($filename, 'r')
+              or die "Could not open $filename: $!";
+            $fh->binmode;
+            $remaining = $stat->size;
+        }
+
+        unless (my $read = $fh->read($buffer, $blksize)) {
+            die
+              "Error while reading upload content $filename ($remaining remaining) $!"
+              if $! and $remaining;
+            $fh->close    # otherwise, we found EOF
+              or die "close of upload content $filename failed: $!";
+            $buffer
+              ||= '';  # LWP expects an empty string on finish, read returns 0
+        }
+        $remaining -= length($buffer);
+        return $buffer;
+    };
 }
 
 1;

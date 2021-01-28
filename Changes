@@ -3,6 +3,8 @@ Revision history for Perl extension Net::Google::Drive::Simple
 
 {{$NEXT}}
 
+- Don't use HTTP::Request::Common directly (Andy Baugh)
+
 0.18      2020-10-16
 
 - Escape single quotes in file and folder names

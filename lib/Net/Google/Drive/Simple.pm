@@ -5,19 +5,22 @@ package Net::Google::Drive::Simple;
 use strict;
 use warnings;
 
-use LWP::UserAgent;
-use HTTP::Request;
-use HTTP::Headers;
+use LWP::UserAgent                 ();
+use HTTP::Request                  ();
+
+use File::MMagic                    ();
+use IO::File                        ();
+
+use OAuth::Cmdline::CustomFile      ();
+use OAuth::Cmdline::GoogleDrive     ();
+
+use Net::Google::Drive::Simple::Item ();
+
 use File::Basename;
+
 use YAML qw( LoadFile DumpFile );
 use JSON qw( from_json to_json );
 use Log::Log4perl qw(:easy);
-use File::MMagic;
-use IO::File;
-use OAuth::Cmdline::CustomFile;
-use OAuth::Cmdline::GoogleDrive;
-
-use Net::Google::Drive::Simple::Item;
 
 our $VERSION = '0.20';
 

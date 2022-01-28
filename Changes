@@ -3,15 +3,18 @@ Revision history for Perl extension Net::Google::Drive::Simple
 
 {{$NEXT}}
 
+        * Made required changes required by backups (Tim Mullin)
+        * 'http_put' now accepts a CODE ref. (Håkon Hægland)
+
 0.19      2021-01-28
 
-- Don't use HTTP::Request::Common directly (Andy Baugh)
+        * Don't use HTTP::Request::Common directly (Andy Baugh)
 
 0.18      2020-10-16
 
-- Escape single quotes in file and folder names
-- Bump min Perl version to 5.016 (Mojolicious requirement)
-- Switch distro to Dist::Zilla
+        * Escape single quotes in file and folder names
+        * Bump min Perl version to 5.016 (Mojolicious requirement)
+        * Switch distro to Dist::Zilla
 
 0.17 (2020/01/31)
         * Add 'rename' support to rename files or folder

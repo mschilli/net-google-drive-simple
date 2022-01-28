@@ -293,15 +293,18 @@ sub rename {
 ###########################################
 sub http_put {
 ###########################################
-    my ( $self, $url, $body ) = @_;
+    my ( $self, $url, $params ) = @_;
 
+    my $content = delete $params->{Content};
     my $req = HTTP::Request->new(
 		'PUT',
         $url->as_string,
-        [ $self->{oauth}->authorization_headers() ],
-        %$body,
+        [ $self->{oauth}->authorization_headers(), %$params ],
     );
-
+    # $content can be a string or a CODE ref. For example rename() calls us with a string, but
+    #  file_upload() calls us with a CODE ref. The HTTP::Request::new() only accepts a string,
+    #  so we set the content of the request after calling the constructor.
+    $req->content( $content );
     my $resp = $self->http_loop($req);
 
     if ( $resp->is_error ) {

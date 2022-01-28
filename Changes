@@ -4,7 +4,7 @@ Revision history for Perl extension Net::Google::Drive::Simple
 {{$NEXT}}
 
         * Allow setting custom destination filename (Tim Mullin)
-        * 'http_put' now accepts a CODE ref. (Håkon Hægland)
+        * Fix file_upload to set proper content (Håkon Hægland)
         * perltidy codebase
 
 0.19      2021-01-28

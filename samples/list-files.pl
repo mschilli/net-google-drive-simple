@@ -7,7 +7,7 @@ use feature 'say';
 
 use Net::Google::Drive::Simple;
 
-my $gd = Net::Google::Drive::Simple->new();
+my $gd       = Net::Google::Drive::Simple->new();
 my $children = $gd->children("/") or die "Google::Drive failure: $!";
 
 foreach my $child (@$children) {

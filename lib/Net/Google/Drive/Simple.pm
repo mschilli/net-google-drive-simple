@@ -13,6 +13,8 @@ use YAML qw( LoadFile DumpFile );
 use JSON qw( from_json to_json );
 use Log::Log4perl qw(:easy);
 use File::MMagic;
+use IO::File;
+use OAuth::Cmdline::CustomFile;
 use OAuth::Cmdline::GoogleDrive;
 
 use Net::Google::Drive::Simple::Item;
@@ -24,11 +26,20 @@ sub new {
 ###########################################
     my ( $class, %options ) = @_;
 
+    my $oauth;
+
+    if ( exists $options{custom_file} ) {
+        $oauth = OAuth::Cmdline::CustomFile->new( custom_file => $options{custom_file} );
+    }
+    else {
+        $oauth = OAuth::Cmdline::GoogleDrive->new( );
+    }
+
     my $self = {
         init_done      => undef,
         api_file_url   => "https://www.googleapis.com/drive/v2/files",
         api_upload_url => "https://www.googleapis.com/upload/drive/v2/files",
-        oauth          => OAuth::Cmdline::GoogleDrive->new(),
+        oauth          => $oauth,
         error          => undef,
         %options,
     };
@@ -202,7 +213,9 @@ sub file_create {
 ###########################################
 sub file_upload {
 ###########################################
-    my ( $self, $file, $parent_id, $file_id ) = @_;
+    my ( $self, $file, $parent_id, $file_id, $opts ) = @_;
+
+    $opts = {} if !defined $opts;
 
     # Since a file upload can take a long time, refresh the token
     # just in case.
@@ -224,7 +237,8 @@ sub file_upload {
             {
                 mimeType => $mime_type,
                 parents  => [ { id => $parent_id } ],
-                title    => $title,
+                title       => $opts->{ title } ? $opts->{ title } : $title,
+                description => $opts->{ description },
             }
         );
 

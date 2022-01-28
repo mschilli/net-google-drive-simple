@@ -22,7 +22,7 @@ use YAML qw( LoadFile DumpFile );
 use JSON qw( from_json to_json );
 use Log::Log4perl qw(:easy);
 
-our $VERSION = '0.20';
+our $VERSION = '0.21';
 
 ###########################################
 sub new {

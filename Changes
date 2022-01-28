@@ -3,6 +3,8 @@ Revision history for Perl extension Net::Google::Drive::Simple
 
 {{$NEXT}}
 
+0.20      2022-01-28
+
         * Allow setting custom destination filename (Tim Mullin)
         * Fix file_upload to set proper content (Håkon Hægland)
         * perltidy codebase

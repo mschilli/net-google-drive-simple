@@ -641,6 +641,8 @@ sub http_loop {
             if ( --$RETRIES >= 0 ) {
                 ERROR "Retrying in $SLEEP_INTERVAL seconds";
                 sleep $SLEEP_INTERVAL;
+                $self->{oauth}->token_expire();
+                $req->header( $self->{oauth}->authorization_headers() );
                 redo;
             }
             else {

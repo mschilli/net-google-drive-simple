@@ -3,6 +3,8 @@ Revision history for Perl extension Net::Google::Drive::Simple
 
 {{$NEXT}}
 
+0.22      2022-03-17
+
         * Refresh the token on retry.
         * Remove Crypt::SSLeay dependency
 

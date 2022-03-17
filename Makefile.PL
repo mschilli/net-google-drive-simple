@@ -17,7 +17,6 @@ my %WriteMakefileArgs = (
   "LICENSE" => "perl",
   "NAME" => "Net::Google::Drive::Simple",
   "PREREQ_PM" => {
-    "Crypt::SSLeay" => "0.72",
     "File::MMagic" => "1.29",
     "JSON" => "2.53",
     "LWP::Protocol::https" => "6.04",
@@ -46,7 +45,6 @@ my %WriteMakefileArgs = (
 );
 
 my %FallbackPrereqs = (
-  "Crypt::SSLeay" => "0.72",
   "ExtUtils::MakeMaker" => 0,
   "File::MMagic" => "1.29",
   "File::Spec" => 0,

@@ -2,7 +2,6 @@ use strict;
 use warnings;
 
 on 'runtime' => sub {
-    requires 'Crypt::SSLeay'        => '0.72';
     requires 'File::MMagic'         => '1.29';
     requires 'JSON'                 => '2.53';
     requires 'Log::Log4perl'        => '1';

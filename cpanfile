@@ -11,7 +11,6 @@ on 'runtime' => sub {
     requires 'OAuth::Cmdline'       => '0.07';
     requires 'Pod::Usage'           => '1.36';
     requires 'Sysadm::Install'      => '0.43';
-    requires 'YAML'                 => '0.71';
 };
 
 on 'configure' => sub {

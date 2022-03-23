@@ -150,6 +150,15 @@ sub files {
 
     $self->init();
 
+    if ( my $title = $search_opts->{title} ) {
+        $title =~ s|\'|\\\'|g;
+        if ( defined $opts->{q} && length $opts->{q} ) {
+            $opts->{q} .= ' AND ';
+        }
+
+        $opts->{q} .= "title = '$title'";
+    }
+
     my @docs = ();
 
     while (1) {

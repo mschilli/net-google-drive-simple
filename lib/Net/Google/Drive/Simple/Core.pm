@@ -164,10 +164,20 @@ sub http_json {
     my $verb    = 'GET';
     my $content;
     if ($post_data) {
-        $verb = 'POST';
-        push @headers, "Content-Type", "application/json";
-        $content = to_json($post_data);
+        if ( ref $post_data eq 'ARRAY' ) {
+            ( $verb, $post_data ) = @{$post_data};
+        } else {
+            $verb = 'POST';
+        }
+
+        if ($post_data) {
+            push @headers, "Content-Type", "application/json";
+        }
+
+        defined $post_data
+            and $content = to_json($post_data);
     }
+
     my $req = HTTP::Request->new(
         $verb,
         $url->as_string(),
@@ -304,3 +314,66 @@ sub _content_sub {
 }
 
 1;
+
+__END__
+
+=pod
+
+=head1 DESCRIPTION
+
+This is a baseclass that the V2 and V3 implementations of the module use.
+You shouldn't use this class directly.
+
+=head1 METHODS
+
+These are methods that are shared among L<Net::Google::Drive::Simple::V2>
+and L<Net::Google::Drive::Simple::V3>.
+
+You wouldn't normally use these methods.
+
+=head2 C<error>
+
+Set and retrieve the current error.
+
+=head2 C<init>
+
+Internal initialization to setup the connection.
+
+=head2 C<api_test>
+
+Used at init time to check that the connection is correct.
+
+=head2 C<data_factory>
+
+Set up an object of L<Net::Google::Drive::Simple::Item>.
+
+=head2 C<http_json>
+
+Make an HTTP request with a body.
+
+=head2 C<http_loop>
+
+Perform a request.
+
+=head2 C<file_metadata>
+
+    my $metadata_hash_ref = $gd->file_metadata($fileId);
+
+Return metadata about the file with the specified ID from Google Drive.
+
+=head2 C<file_url>
+
+Retrieve a file URL.
+
+=head2 C<file_mime_type>
+
+Retrieve the mime type of a file.
+
+=head2 C<item_iterator>
+
+Create an iterator over items.
+
+=head2 C<path_resolve>
+
+Resolve paths to the folder ID.
+

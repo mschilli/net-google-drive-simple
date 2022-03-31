@@ -2,6 +2,10 @@
 Revision history for Perl extension Net::Google::Drive::Simple
 
 {{$NEXT}}
+        * Add support for Google API v3 (Sawyer X)
+        * Fix title option search in files() method (Sawyer X)
+
+0.22    2022-03-17
 
         * Refresh the token on retry.
         * Remove Crypt::SSLeay dependency

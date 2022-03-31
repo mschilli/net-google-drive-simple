@@ -1609,7 +1609,7 @@ sub unhide_drive {
 }
 
 ###########################################
-sub update_drives {
+sub update_drive {
 ###########################################
     my ( $self, $driveId, $options ) = @_;
 
@@ -1617,7 +1617,7 @@ sub update_drives {
         or LOGDIE('update_drive() missing drive ID');
 
     ref $options eq 'HASH'
-        or LOGDIE('update_drives() missing parameters');
+        or LOGDIE('update_drive() missing parameters');
 
     my $info = {
         'query_parameters' => {
@@ -1633,7 +1633,7 @@ sub update_drives {
         >],
 
         'path'        => "drives/$driveId",
-        'method_name' => 'update_drives',
+        'method_name' => 'update_drive',
         'http_method' => HTTP_METHOD_PATCH(),
     };
 
@@ -2391,9 +2391,9 @@ This is also known as C<drives.unhide>.
 You can read about the parameters
 L<here|https://developers.google.com/drive/api/v3/reference/drives/unhide>.
 
-=head2 C<update_drives>
+=head2 C<update_drive>
 
-    my $drive = $gd->update_drives( $driveId, {%params} );
+    my $drive = $gd->update_drive( $driveId, {%params} );
 
 This serves the path to C</drives/$driveId>.
 

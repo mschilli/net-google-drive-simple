@@ -51,7 +51,7 @@ can_ok(
         hide_drive
         drives
         unhide_drive
-        update_drives
+        update_drive
         children
         children_by_folder_id
     >,

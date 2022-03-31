@@ -24,7 +24,7 @@ use constant {
     'TYPE_BYTES'   => 'bytes',
 };
 
-our $VERSION = '0.22';
+our $VERSION = '3.00';
 
 # TODO:
 # * requestId are random UUIDs that we should probably generate (drive_create)

@@ -8,7 +8,7 @@ use warnings;
 use Net::Google::Drive::Simple::V2;
 use Net::Google::Drive::Simple::V3;
 
-our $VERSION = '0.22';
+our $VERSION = '3.00';
 
 ###########################################
 sub new {

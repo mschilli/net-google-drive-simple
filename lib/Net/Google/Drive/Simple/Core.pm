@@ -19,7 +19,7 @@ use Net::Google::Drive::Simple::Item ();
 use JSON qw( from_json to_json );
 use Log::Log4perl qw(:easy);
 
-our $VERSION = '0.22';
+our $VERSION = '3.00';
 
 ###########################################
 sub new {

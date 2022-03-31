@@ -5,6 +5,11 @@ package Net::Google::Drive::Simple;
 use strict;
 use warnings;
 
+use constant {
+    'DEFAULT_VERSION'     => 2,
+    'RECOMMENDED_VERSION' => 3,
+};
+
 use Net::Google::Drive::Simple::V2;
 use Net::Google::Drive::Simple::V3;
 
@@ -15,12 +20,12 @@ sub new {
 ###########################################
     my ( $class, %options ) = @_;
 
-    my $version = $options{version} || 2;
-    if ( $version != 2 && $version != 3 ) {
+    my $version = $options{'version'} || DEFAULT_VERSION();
+    if ( $version != DEFAULT_VERSION() && $version != RECOMMENDED_VERSION() ) {
         die "Incorrect version number ($version) - must be '2' or '3'";
     }
 
-    my $impl = $version == 2
+    my $impl = $version == DEFAULT_VERSION()
              ? Net::Google::Drive::Simple::V2->new(%options)
              : Net::Google::Drive::Simple::V3->new(%options);
 
@@ -42,8 +47,8 @@ Net::Google::Drive::Simple - Simple modification of Google Drive data
 
     # requires a ~/.google-drive.yml file with an access token,
     # see description below.
-    my $gd = Net::Google::Drive::Simple->new();                 # old, v2 interface
-    my $gd = Net::Google::Drive::Simple->new( 'version' => 3 ); # new, v3 interface
+    my $gd = Net::Google::Drive::Simple->new( 'version' => 3 ); # v3 interface (RECOMMENDED!)
+    my $gd = Net::Google::Drive::Simple->new();                 # v2 interface (OUTDATE!)
 
     my $children = $gd->children( "/" ); # or any other folder /path/location
 
@@ -72,7 +77,15 @@ All methods are documented based on the version you use:
 
 =over 4
 
-=item * V2 (default)
+=item * V3 (recommended)
+
+    # Create default V3 API:
+    my $gd = Net::Google:Drive::Simple->new( 'version' => 3 );
+
+The methods available are documented in
+L<Net::Google::Drive::Simple::V3>.
+
+=item * V2 (default, outdated)
 
     # Create default V2 API:
     my $gd = Net::Google:Drive::Simple->new();
@@ -82,14 +95,6 @@ All methods are documented based on the version you use:
 
 The methods available are documented in
 L<Net::Google::Drive::Simple::V2>.
-
-=item * V3 (new)
-
-    # Create default V3 API:
-    my $gd = Net::Google:Drive::Simple->new( 'version' => 3 );
-
-The methods available are documented in
-L<Net::Google::Drive::Simple::V3>.
 
 =back
 
@@ -141,18 +146,19 @@ transparently when the old one is about to expire.
 Constructor, creates a helper object to retrieve Google Drive data
 later.
 
-By default, this returns an object of
-L<Net::Google::Drive::Simple::V2> which implements version 2 of the
-Google Drive API.
+While v2 (the outdated version) is still supported by Google, we
+recommend you use v3:
 
-While that API version is still available, the new version is recommended
-and you create an object of it by passing the C<version> parameter:
-
+    # Returns object of Net::Google::Drive::Simple::V3
     my $gd = Net::Google::Drive::Simple->new( 'version' => 3 );
 
-This will return an object of L<Net::Google::Drive::Simple::V3>.
+    # Returns object of Net::Google::Drive::Simple::V2
+    my $gd = Net::Google::Drive::Simple->new( 'version' => 2 );
+    # or:
+    my $gd = Net::Google::Drive::Simple->new();
 
-Read up on the methods in each class.
+Read up on the methods in each class: L<Net::Google::Drive::Simple::V3>
+and L<Net::Google::Drive::Simple::V2>.
 
 =back
 

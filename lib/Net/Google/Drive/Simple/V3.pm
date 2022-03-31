@@ -150,6 +150,8 @@ sub _handle_deprecated_params {
             WARN("[$method] Parameter name '$dep_name' is deprecated, use '$alt' instead");
         }
     }
+
+    return;
 }
 
 ###########################################
@@ -1772,121 +1774,96 @@ sub _path_resolve {
         return;
     }
 
+    # parent of root is root
     if ( @ids == 1 ) {
-
-        # parent of root is root
-        return ( @ids, @ids );
+        push @ids, $ids[0];
     }
 
     return @ids;
 }
 
 # TODO: Placed here until I have a use for it
-my %IMPORT_FORMATS = (
-    'application/x-vnd.oasis.opendocument.presentation' =>
-        ['application/vnd.google-apps.presentation'],
-    'text/tab-separated-values' =>
-        ['application/vnd.google-apps.spreadsheet'],
-    'image/jpeg' => ['application/vnd.google-apps.document'],
-    'image/bmp'  => ['application/vnd.google-apps.document'],
-    'image/gif'  => ['application/vnd.google-apps.document'],
-    'application/vnd.ms-excel.sheet.macroenabled.12' =>
-        ['application/vnd.google-apps.spreadsheet'],
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.template'
-        => ['application/vnd.google-apps.document'],
-    'application/vnd.ms-powerpoint.presentation.macroenabled.12' =>
-        ['application/vnd.google-apps.presentation'],
-    'application/vnd.ms-word.template.macroenabled.12' =>
-        ['application/vnd.google-apps.document'],
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        => ['application/vnd.google-apps.document'],
-    'image/pjpeg' => ['application/vnd.google-apps.document'],
-    'application/vnd.google-apps.script+text/plain' =>
-        ['application/vnd.google-apps.script'],
-    'application/vnd.ms-excel' => ['application/vnd.google-apps.spreadsheet'],
-    'application/vnd.sun.xml.writer' =>
-        ['application/vnd.google-apps.document'],
-    'application/vnd.ms-word.document.macroenabled.12' =>
-        ['application/vnd.google-apps.document'],
-    'application/vnd.ms-powerpoint.slideshow.macroenabled.12' =>
-        ['application/vnd.google-apps.presentation'],
-    'text/rtf' => ['application/vnd.google-apps.document'],
-    'application/vnd.oasis.opendocument.spreadsheet' =>
-        ['application/vnd.google-apps.spreadsheet'],
-    'text/plain' => ['application/vnd.google-apps.document'],
-    'application/x-vnd.oasis.opendocument.spreadsheet' =>
-        ['application/vnd.google-apps.spreadsheet'],
-    'application/x-vnd.oasis.opendocument.text' =>
-        ['application/vnd.google-apps.document'],
-    'image/png'                => ['application/vnd.google-apps.document'],
-    'application/msword'       => ['application/vnd.google-apps.document'],
-    'application/pdf'          => ['application/vnd.google-apps.document'],
-    'application/x-msmetafile' => ['application/vnd.google-apps.drawing'],
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.template' =>
-        ['application/vnd.google-apps.spreadsheet'],
-    'application/vnd.ms-powerpoint' =>
-        ['application/vnd.google-apps.presentation'],
-    'application/vnd.ms-excel.template.macroenabled.12' =>
-        ['application/vnd.google-apps.spreadsheet'],
-    'image/x-bmp'     => ['application/vnd.google-apps.document'],
-    'application/rtf' => ['application/vnd.google-apps.document'],
-    'application/vnd.openxmlformats-officedocument.presentationml.template'
-        => ['application/vnd.google-apps.presentation'],
-    'image/x-png' => ['application/vnd.google-apps.document'],
-    'text/html'   => ['application/vnd.google-apps.document'],
-    'application/vnd.oasis.opendocument.text' =>
-        ['application/vnd.google-apps.document'],
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-        => ['application/vnd.google-apps.presentation'],
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' =>
-        ['application/vnd.google-apps.spreadsheet'],
-    'application/vnd.google-apps.script+json' =>
-        ['application/vnd.google-apps.script'],
-    'application/vnd.openxmlformats-officedocument.presentationml.slideshow'
-        => ['application/vnd.google-apps.presentation'],
-    'application/vnd.ms-powerpoint.template.macroenabled.12' =>
-        ['application/vnd.google-apps.presentation'],
-    'text/csv' => ['application/vnd.google-apps.spreadsheet'],
-    'application/vnd.oasis.opendocument.presentation' =>
-        ['application/vnd.google-apps.presentation'],
-    'image/jpg'     => ['application/vnd.google-apps.document'],
-    'text/richtext' => ['application/vnd.google-apps.document']
-);
-
-my @ERXPORT_FORMATS = (
-    'application/vnd.google-apps.document' => [
-        'application/rtf',
-        'application/vnd.oasis.opendocument.text',
-        'text/html',
-        'application/pdf',
-        'application/epub+zip',
-        'application/zip',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'text/plain'
-    ],
-    'application/vnd.google-apps.spreadsheet' => [
-        'application/x-vnd.oasis.opendocument.spreadsheet',
-        'text/tab-separated-values',
-        'application/pdf',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'text/csv',
-        'application/zip',
-        'application/vnd.oasis.opendocument.spreadsheet'
-    ],
-    'application/vnd.google-apps.jam'    => ['application/pdf'],
-    'application/vnd.google-apps.script' =>
-        ['application/vnd.google-apps.script+json'],
-    'application/vnd.google-apps.presentation' => [
-        'application/vnd.oasis.opendocument.presentation',
-        'application/pdf',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'text/plain'
-    ],
-    'application/vnd.google-apps.form'    => ['application/zip'],
-    'application/vnd.google-apps.drawing' =>
-        [ 'image/svg+xml', 'image/png', 'application/pdf', 'image/jpeg' ],
-    'application/vnd.google-apps.site' => ['text/plain']
-);
+#my %IMPORT_FORMATS = (
+#    'application/x-vnd.oasis.opendocument.presentation'                         => ['application/vnd.google-apps.presentation'],
+#    'text/tab-separated-values'                                                 => ['application/vnd.google-apps.spreadsheet'],
+#    'image/jpeg'                                                                => ['application/vnd.google-apps.document'],
+#    'image/bmp'                                                                 => ['application/vnd.google-apps.document'],
+#    'image/gif'                                                                 => ['application/vnd.google-apps.document'],
+#    'application/vnd.ms-excel.sheet.macroenabled.12'                            => ['application/vnd.google-apps.spreadsheet'],
+#    'application/vnd.openxmlformats-officedocument.wordprocessingml.template'   => ['application/vnd.google-apps.document'],
+#    'application/vnd.ms-powerpoint.presentation.macroenabled.12'                => ['application/vnd.google-apps.presentation'],
+#    'application/vnd.ms-word.template.macroenabled.12'                          => ['application/vnd.google-apps.document'],
+#    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'   => ['application/vnd.google-apps.document'],
+#    'image/pjpeg'                                                               => ['application/vnd.google-apps.document'],
+#    'application/vnd.google-apps.script+text/plain'                             => ['application/vnd.google-apps.script'],
+#    'application/vnd.ms-excel'                                                  => ['application/vnd.google-apps.spreadsheet'],
+#    'application/vnd.sun.xml.writer'                                            => ['application/vnd.google-apps.document'],
+#    'application/vnd.ms-word.document.macroenabled.12'                          => ['application/vnd.google-apps.document'],
+#    'application/vnd.ms-powerpoint.slideshow.macroenabled.12'                   => ['application/vnd.google-apps.presentation'],
+#    'text/rtf'                                                                  => ['application/vnd.google-apps.document'],
+#    'application/vnd.oasis.opendocument.spreadsheet'                            => ['application/vnd.google-apps.spreadsheet'],
+#    'text/plain'                                                                => ['application/vnd.google-apps.document'],
+#    'application/x-vnd.oasis.opendocument.spreadsheet'                          => ['application/vnd.google-apps.spreadsheet'],
+#    'application/x-vnd.oasis.opendocument.text'                                 => ['application/vnd.google-apps.document'],
+#    'image/png'                                                                 => ['application/vnd.google-apps.document'],
+#    'application/msword'                                                        => ['application/vnd.google-apps.document'],
+#    'application/pdf'                                                           => ['application/vnd.google-apps.document'],
+#    'application/x-msmetafile'                                                  => ['application/vnd.google-apps.drawing'],
+#    'application/vnd.openxmlformats-officedocument.spreadsheetml.template'      => ['application/vnd.google-apps.spreadsheet'],
+#    'application/vnd.ms-powerpoint'                                             => ['application/vnd.google-apps.presentation'],
+#    'application/vnd.ms-excel.template.macroenabled.12'                         => ['application/vnd.google-apps.spreadsheet'],
+#    'image/x-bmp'                                                               => ['application/vnd.google-apps.document'],
+#    'application/rtf'                                                           => ['application/vnd.google-apps.document'],
+#    'application/vnd.openxmlformats-officedocument.presentationml.template'     => ['application/vnd.google-apps.presentation'],
+#    'image/x-png'                                                               => ['application/vnd.google-apps.document'],
+#    'text/html'                                                                 => ['application/vnd.google-apps.document'],
+#    'application/vnd.oasis.opendocument.text'                                   => ['application/vnd.google-apps.document'],
+#    'application/vnd.openxmlformats-officedocument.presentationml.presentation' => ['application/vnd.google-apps.presentation'],
+#    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'         => ['application/vnd.google-apps.spreadsheet'],
+#    'application/vnd.google-apps.script+json'                                   => ['application/vnd.google-apps.script'],
+#    'application/vnd.openxmlformats-officedocument.presentationml.slideshow'    => ['application/vnd.google-apps.presentation'],
+#    'application/vnd.ms-powerpoint.template.macroenabled.12'                    => ['application/vnd.google-apps.presentation'],
+#    'text/csv'                                                                  => ['application/vnd.google-apps.spreadsheet'],
+#    'application/vnd.oasis.opendocument.presentation'                           => ['application/vnd.google-apps.presentation'],
+#    'image/jpg'                                                                 => ['application/vnd.google-apps.document'],
+#    'text/richtext'                                                             => ['application/vnd.google-apps.document']
+#);
+#
+#my @ERXPORT_FORMATS = (
+#    'application/vnd.google-apps.document' => [
+#        'application/rtf',
+#        'application/vnd.oasis.opendocument.text',
+#        'text/html',
+#        'application/pdf',
+#        'application/epub+zip',
+#        'application/zip',
+#        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+#        'text/plain'
+#    ],
+#
+#    'application/vnd.google-apps.spreadsheet' => [
+#        'application/x-vnd.oasis.opendocument.spreadsheet',
+#        'text/tab-separated-values',
+#        'application/pdf',
+#        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+#        'text/csv',
+#        'application/zip',
+#        'application/vnd.oasis.opendocument.spreadsheet'
+#    ],
+#
+#    'application/vnd.google-apps.jam'        => ['application/pdf'],
+#        'application/vnd.google-apps.script' => ['application/vnd.google-apps.script+json'],
+#
+#    'application/vnd.google-apps.presentation' => [
+#        'application/vnd.oasis.opendocument.presentation',
+#        'application/pdf',
+#        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+#        'text/plain'
+#    ],
+#    'application/vnd.google-apps.form'    => ['application/zip'],
+#    'application/vnd.google-apps.drawing' => [ 'image/svg+xml', 'image/png', 'application/pdf', 'image/jpeg' ],
+#    'application/vnd.google-apps.site'    => ['text/plain']
+#);
 
 1;
 
@@ -1927,8 +1904,8 @@ This serves the path to C</about>.
 
 It's also referred to as C<about.get>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/about/get>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/about/get>.
 
 =head2 C<getStartPageToken>
 
@@ -1938,8 +1915,8 @@ This serves the path to C</changes/startPageToken>.
 
 This is also known as C<changes_getStartPageToken>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/changes/getStartPageToken>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/changes/getStartPageToken>.
 
 =head2 C<changes>
 
@@ -1949,8 +1926,8 @@ This serves the path to C</changes>.
 
 This is also known as C<changes.list>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/changes/list>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/changes/list>.
 
 =head2 C<watch_changes>
 
@@ -1960,8 +1937,8 @@ This serves the path to C</changes/watch>.
 
 This is also known as C<changes.watch>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/changes/watch>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/changes/watch>.
 
 =head2 C<stop_channels>
 
@@ -1971,8 +1948,8 @@ This serves the path to C</channels/stop>.
 
 This is also known as C<channels.stop>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/channels/stop>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/channels/stop>.
 
 =head2 C<create_comment>
 
@@ -1982,8 +1959,8 @@ This serves the path to C</files/$fileId/comments>.
 
 This is also known as C<comments.create>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/comments/create>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/comments/create>.
 
 =head2 C<delete_comment( $fileId, $commentId )>
 
@@ -1993,8 +1970,8 @@ This serves the path to C</files/$fileId/comments/$commentId>.
 
 This is also known as C<comments.delete>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/comments/delete>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/comments/delete>.
 
 =head2 C<get_comment( $fileId, $commentId, $params )>
 
@@ -2004,8 +1981,8 @@ This serves the path to C</files/$fileId/comments/$commentId>.
 
 This is also known as C<comments.get>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/comments/get>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/comments/get>.
 
 =head2 C<comments>
 
@@ -2015,8 +1992,8 @@ This serves the path to C</files/$fileId/comments>.
 
 This is also known as C<comments.list>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/comments/list>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/comments/list>.
 
 =head2 C<update_comment>
 
@@ -2026,8 +2003,8 @@ This serves the path to C</files/$fileId/comments/$commentId>.
 
 This is also known as C<comments.update>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/comments/update>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/comments/update>.
 
 =head2 C<copy_file>
 
@@ -2037,8 +2014,8 @@ This serves the path to C</files/$fileId/copy>.
 
 This is also known as C<files.copy>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/files/copy>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/copy>.
 
 =head2 C<create_file>
 
@@ -2050,8 +2027,8 @@ This is also known as C<files.create>.
 
 This one is for creating metadata for a file.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/files/create>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
 
 =head2 C<upload_file>
 
@@ -2064,8 +2041,8 @@ This is also known as C<files.create>.
 This one is for uploading a file, even though it shares a moniker with the
 C<create_file()> method in the Google Drive API.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/files/create>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
 
 =head2 C<delete_file>
 
@@ -2075,8 +2052,8 @@ This serves the path to C</files/$fileId>.
 
 This is also known as C<files.delete>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/files/delete>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/delete>.
 
 =head2 C<export_file>
 
@@ -2086,8 +2063,8 @@ This serves the path to C</files/$fileId/export>.
 
 This is also known as C<files.export>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/files/export>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/export>.
 
 =head2 C<generateIds>
 
@@ -2097,8 +2074,8 @@ This serves the path to C</files/generateIds>.
 
 This is also known as C<files.generateIds>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/files/generateIds>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/generateIds>.
 
 =head2 C<get_file>
 
@@ -2108,8 +2085,8 @@ This serves the path to C</files/$fileId>.
 
 This is also known as C<files.get>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/files/get>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/get>.
 
 =head2 C<files>
 
@@ -2119,8 +2096,8 @@ This serves the path to C</files>.
 
 This is also known as C<files.list>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/files/list>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/list>.
 
 =head2 C<update_file>
 
@@ -2132,8 +2109,8 @@ This is also known as C<files.update>.
 
 This is for updating a file's metadata and content.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/files/update>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/update>.
 
 =head2 C<update_file_metadata>
 
@@ -2146,8 +2123,8 @@ This is also known as C<files.update>.
 This one is only for updating a file's metadata, even though it shares
 a moniker with the C<update_file()> method in the Google Drive API.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/files/update>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/update>.
 
 =head2 C<watch_file>
 
@@ -2157,8 +2134,8 @@ This serves the path to C</files/$fileId/watch>.
 
 This is also known as C<files.watch>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/files/watch>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/watch>.
 
 =head2 C<empty_trash>
 
@@ -2168,8 +2145,8 @@ This serves the path to C</files/trash>.
 
 This is also known as C<files.emptyTrash>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/files/emptyTrash>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/emptyTrash>.
 
 =head2 C<create_permission>
 
@@ -2179,8 +2156,8 @@ This serves the path to C</files/$fileId/permissions>.
 
 This is also known as C<permissions.create>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/permissions/create>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/permissions/create>.
 
 =head2 C<delete_permission>
 
@@ -2190,8 +2167,8 @@ This serves the path to C</files/$fileId/permissions/$permissionId>.
 
 This is also known as C<permissions.delete>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/permissions/delete>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/permissions/delete>.
 
 =head2 C<get_permission>
 
@@ -2201,8 +2178,8 @@ This serves the path to C</files/$fileId/permissions/$permissionId>.
 
 This is also known as C<permissions.get>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/permissions/get>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/permissions/get>.
 
 =head2 C<permissions>
 
@@ -2212,8 +2189,8 @@ This serves the path to C</files/$fileId/permissions>.
 
 This is also known as C<permissions.list>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/permissions/list>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/permissions/list>.
 
 =head2 C<update_permission>
 
@@ -2223,8 +2200,8 @@ This serves the path to C</files/$fileId/permissions/$permissionId>.
 
 This is also known as C<permissions.update>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/permissions/update>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/permissions/update>.
 
 =head2 C<create_reply>
 
@@ -2234,8 +2211,8 @@ This serves the path to C</files/$fileId/comments/$commentId/replies>.
 
 This is also known as C<replies.create>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/replies/create>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/replies/create>.
 
 =head2 C<delete_reply( $fileId, $commentId, $replyId )>
 
@@ -2245,8 +2222,8 @@ This serves the path to C</files/$fileId/comments/$commentId/replies/$replyId>.
 
 This is also known as C<replies.delete>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/replies/delete>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/replies/delete>.
 
 =head2 C<get_reply>
 
@@ -2256,8 +2233,8 @@ This serves the path to C</files/$fileId/comments/$commentId/replies/$replyId>.
 
 This is also known as C<replies.get>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/replies/get>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/replies/get>.
 
 =head2 C<replies>
 
@@ -2267,8 +2244,8 @@ This serves the path to C</files/$fileId/comments/$commentId/replies>.
 
 This is also known as C<replies.list>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/replies/list>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/replies/list>.
 
 =head2 C<update_reply>
 
@@ -2278,8 +2255,8 @@ This serves the path to C</files/$fileId/comments/$commentId/replies/$replyId>.
 
 This is also known as C<replies.update>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/replies/update>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/replies/update>.
 
 =head2 C<delete_revision>
 
@@ -2289,8 +2266,8 @@ This serves the path to C</files/$fileId/revisions/$revisionId>.
 
 This is also known as C<revisions.delete>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/revisions/delete>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/revisions/delete>.
 
 =head2 C<get_revision( $fileId, $revisionId, $params )>
 
@@ -2300,8 +2277,8 @@ This serves the path to C</files/$fileId/revisions/$revisionId>.
 
 This is also known as C<revisions.get>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/revisions/get>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/revisions/get>.
 
 =head2 C<revisions>
 
@@ -2311,8 +2288,8 @@ This serves the path to C</files/$fileId/revisions>.
 
 This is also known as C<revisions.list>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/revisions/list>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/revisions/list>.
 
 =head2 C<update_revision>
 
@@ -2322,8 +2299,8 @@ This serves the path to C</files/$fileId/revisions/$revisionId>.
 
 This is also known as C<revisions.update>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/revisions/update>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/revisions/update>.
 
 =head2 C<create_drive>
 
@@ -2333,8 +2310,8 @@ This serves the path to C</drives>.
 
 This is also known as C<drives.create>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/drives/create>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/drives/create>.
 
 =head2 C<delete_drive>
 
@@ -2344,8 +2321,8 @@ This serves the path to C</drives/$driveId>.
 
 This is also known as C<drives.delete>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/drives/delete>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/drives/delete>.
 
 =head2 C<get_drive>
 
@@ -2355,8 +2332,8 @@ This serves the path to C</drives/$driveId>.
 
 This is also known as C<drives.get>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/drives/get>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/drives/get>.
 
 =head2 C<hide_drive>
 
@@ -2366,8 +2343,8 @@ This serves the path to C</drives/$driveId/hide>.
 
 This is also known as C<drives.hide>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/drives/hide>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/drives/hide>.
 
 =head2 C<drives>
 
@@ -2377,8 +2354,8 @@ This serves the path to C</drives>.
 
 This is also known as C<drives.list>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/drives/list>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/drives/list>.
 
 =head2 C<unhide_drive>
 
@@ -2388,8 +2365,8 @@ This serves the path to C</drives/$driveId/unhide>.
 
 This is also known as C<drives.unhide>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/drives/unhide>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/drives/unhide>.
 
 =head2 C<update_drive>
 
@@ -2399,8 +2376,8 @@ This serves the path to C</drives/$driveId>.
 
 This is also known as C<drives.update>.
 
-You can read about the parameters
-L<here|https://developers.google.com/drive/api/v3/reference/drives/update>.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/drives/update>.
 
 =head2 C<children>
 
@@ -2470,6 +2447,4 @@ modify it under the same terms as Perl itself.
 
 =head1 AUTHOR
 
-2021, Sawyer X <xsawyerx@cpan.org>
-2019, Nicolas R. <cpan@atoomic.org>
-2012-2019, Mike Schilli <cpan@perlmeister.com>
+Sawyer X <xsawyerx@cpan.org>

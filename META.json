@@ -84,12 +84,20 @@
          "file" : "lib/Net/Google/Drive/Simple.pm",
          "version" : "3.00"
       },
+      "Net::Google::Drive::Simple::Core" : {
+         "file" : "lib/Net/Google/Drive/Simple/Core.pm",
+         "version" : "3.00"
+      },
       "Net::Google::Drive::Simple::Item" : {
          "file" : "lib/Net/Google/Drive/Simple/Item.pm",
          "version" : "3.00"
       },
       "Net::Google::Drive::Simple::V2" : {
          "file" : "lib/Net/Google/Drive/Simple/V2.pm",
+         "version" : "3.00"
+      },
+      "Net::Google::Drive::Simple::V3" : {
+         "file" : "lib/Net/Google/Drive/Simple/V3.pm",
          "version" : "3.00"
       }
    },

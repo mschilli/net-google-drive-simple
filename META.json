@@ -59,7 +59,6 @@
             "OAuth::Cmdline" : "0.07",
             "Pod::Usage" : "1.36",
             "Sysadm::Install" : "0.43",
-            "YAML" : "0.71",
             "perl" : "5.016"
          }
       },
@@ -87,6 +86,10 @@
       },
       "Net::Google::Drive::Simple::Item" : {
          "file" : "lib/Net/Google/Drive/Simple/Item.pm",
+         "version" : "0.22"
+      },
+      "Net::Google::Drive::Simple::V2" : {
+         "file" : "lib/Net/Google/Drive/Simple/V2.pm",
          "version" : "0.22"
       }
    },

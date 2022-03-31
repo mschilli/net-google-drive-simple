@@ -42,7 +42,7 @@ sub new {
         %options,
     };
 
-    bless $self, $class;
+    return bless $self, $class;
 }
 
 ###########################################
@@ -330,6 +330,10 @@ These are methods that are shared among L<Net::Google::Drive::Simple::V2>
 and L<Net::Google::Drive::Simple::V3>.
 
 You wouldn't normally use these methods.
+
+=head2 C<new>
+
+Parent method to create one L<Net::Google::Drive::Simple> object.
 
 =head2 C<error>
 

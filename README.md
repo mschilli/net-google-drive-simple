@@ -10,8 +10,8 @@ use Net::Google::Drive::Simple;
 
 # requires a ~/.google-drive.yml file with an access token,
 # see description below.
-my $gd = Net::Google::Drive::Simple->new();                 # old, v2 interface
-my $gd = Net::Google::Drive::Simple->new( 'version' => 3 ); # new, v3 interface
+my $gd = Net::Google::Drive::Simple->new( 'version' => 3 ); # v3 interface (RECOMMENDED!)
+my $gd = Net::Google::Drive::Simple->new();                 # v2 interface (OUTDATE!)
 
 my $children = $gd->children( "/" ); # or any other folder /path/location
 
@@ -39,7 +39,17 @@ to keep a local directory in sync with a remote directory on Google Drive.
 
 All methods are documented based on the version you use:
 
-- V2 (default)
+- V3 (recommended)
+
+    ```perl
+    # Create default V3 API:
+    my $gd = Net::Google:Drive::Simple->new( 'version' => 3 );
+    ```
+
+    The methods available are documented in
+    [Net::Google::Drive::Simple::V3](https://metacpan.org/pod/Net%3A%3AGoogle%3A%3ADrive%3A%3ASimple%3A%3AV3).
+
+- V2 (default, outdated)
 
     ```perl
     # Create default V2 API:
@@ -51,16 +61,6 @@ All methods are documented based on the version you use:
 
     The methods available are documented in
     [Net::Google::Drive::Simple::V2](https://metacpan.org/pod/Net%3A%3AGoogle%3A%3ADrive%3A%3ASimple%3A%3AV2).
-
-- V3 (new)
-
-    ```perl
-    # Create default V3 API:
-    my $gd = Net::Google:Drive::Simple->new( 'version' => 3 );
-    ```
-
-    The methods available are documented in
-    [Net::Google::Drive::Simple::V3](https://metacpan.org/pod/Net%3A%3AGoogle%3A%3ADrive%3A%3ASimple%3A%3AV3).
 
 ## GETTING STARTED
 
@@ -112,20 +112,21 @@ transparently when the old one is about to expire.
     Constructor, creates a helper object to retrieve Google Drive data
     later.
 
-    By default, this returns an object of
-    [Net::Google::Drive::Simple::V2](https://metacpan.org/pod/Net%3A%3AGoogle%3A%3ADrive%3A%3ASimple%3A%3AV2) which implements version 2 of the
-    Google Drive API.
-
-    While that API version is still available, the new version is recommended
-    and you create an object of it by passing the `version` parameter:
+    While v2 (the outdated version) is still supported by Google, we
+    recommend you use v3:
 
     ```perl
+    # Returns object of Net::Google::Drive::Simple::V3
     my $gd = Net::Google::Drive::Simple->new( 'version' => 3 );
+
+    # Returns object of Net::Google::Drive::Simple::V2
+    my $gd = Net::Google::Drive::Simple->new( 'version' => 2 );
+    # or:
+    my $gd = Net::Google::Drive::Simple->new();
     ```
 
-    This will return an object of [Net::Google::Drive::Simple::V3](https://metacpan.org/pod/Net%3A%3AGoogle%3A%3ADrive%3A%3ASimple%3A%3AV3).
-
-    Read up on the methods in each class.
+    Read up on the methods in each class: [Net::Google::Drive::Simple::V3](https://metacpan.org/pod/Net%3A%3AGoogle%3A%3ADrive%3A%3ASimple%3A%3AV3)
+    and [Net::Google::Drive::Simple::V2](https://metacpan.org/pod/Net%3A%3AGoogle%3A%3ADrive%3A%3ASimple%3A%3AV2).
 
 # Error handling
 

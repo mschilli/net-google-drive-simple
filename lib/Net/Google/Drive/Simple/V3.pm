@@ -2391,9 +2391,9 @@ This is also known as C<drives.unhide>.
 You can read about the parameters
 L<here|https://developers.google.com/drive/api/v3/reference/drives/unhide>.
 
-=head2 C<update_drive>
+=head2 C<update_drives>
 
-    my $drive = $gd->update_drive( $driveId, {%params} );
+    my $drive = $gd->update_drives( $driveId, {%params} );
 
 This serves the path to C</drives/$driveId>.
 

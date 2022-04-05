@@ -164,6 +164,9 @@ sub _prepare_body_options {
         @{$body_param_names},
     };
 
+    keys %{$body_options} == 0
+        and return;
+
     return $body_options;
 }
 

@@ -1733,7 +1733,7 @@ sub children_by_folder_id {
 ###########################################
 sub _path_resolve {
 ###########################################
-    my ( $self, $path, $search_opts );
+    my ( $self, $path, $search_opts ) = @_;
 
     $search_opts = {} if !defined $search_opts;
 

@@ -3,6 +3,7 @@ use warnings;
 
 on 'runtime' => sub {
     requires 'File::MMagic'         => '1.29';
+    requires 'MIME::Base64'         => '3.00';
     requires 'JSON'                 => '2.53';
     requires 'Log::Log4perl'        => '1';
     requires 'LWP::Protocol::https' => '6.04';

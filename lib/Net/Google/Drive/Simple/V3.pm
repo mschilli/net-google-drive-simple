@@ -178,7 +178,7 @@ sub _handle_api_method {
 
     # We yank out all the body parameters so we don't validate them
     # TODO: Support body parameter validation
-    my $body_options = $self->_prepare_body_options( $options, $info->{'body_parameters'} );
+    $info->{'body_params'} //= $self->_prepare_body_options( $options, $info->{'body_parameters'} );
 
     # We validate the options left
     $self->_validate_param_type( $method, $info->{'query_parameters'}, $options );
@@ -210,16 +210,8 @@ sub _handle_api_method {
 
     # We generate the URI path
     my $uri = $self->_generate_uri( $info->{'path'}, $options );
-
-    # GET requests cannot have a body
-    if (   $info->{'http_method'} eq HTTP_METHOD_GET()
-        || $info->{'http_method'} eq HTTP_METHOD_DELETE() )
-    {
-        undef $body_options;
-    }
-
-    # We make the request and get a response
-    return $self->http_json( $uri, [ $info->{'http_method'}, $body_options ] );
+    my $req = $self->_generate_request( $uri, $info );
+    return $self->_make_request($req);
 }
 
 # --- about

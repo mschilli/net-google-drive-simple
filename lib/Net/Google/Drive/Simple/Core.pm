@@ -172,10 +172,8 @@ sub http_json {
 
         if ($post_data) {
             push @headers, "Content-Type", "application/json";
+            $content = to_json($post_data);
         }
-
-        defined $post_data
-            and $content = to_json($post_data);
     }
 
     my $req = HTTP::Request->new(

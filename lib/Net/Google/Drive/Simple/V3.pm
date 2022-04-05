@@ -1703,6 +1703,17 @@ sub children_by_folder_id {
 
     $opts->{'q'} .= "'$folder_id' in parents";
 
+    if ( my $name = $search_opts->{'name'} ) {
+        $name =~ s{\'}{\\\'}xmsg;
+        $opts->{'q'} .= " AND name = '$name'";
+    }
+
+    $opts->{'fields'} //= '';
+    if ( $opts->{'fields'} ) {
+        $opts->{'fields'} .= ',';
+    }
+    $opts->{'fields'} .= 'files(id,kind,name,mimeType,originalFilename,trashed)';
+
     # Find only those not in the trash
     # possibly go through all paged results
     my @children;
@@ -1713,8 +1724,8 @@ sub children_by_folder_id {
         my @items = @{ $data->{'files'} || [] };
 
         while ( my $item = shift @items ) {
-            if ( $item->{'labels'}{'trashed'} ) {
-                DEBUG("Skipping $item->{'title'} (item in trash)");
+            if ( $item->{'trashed'} ) {
+                DEBUG("Skipping $item->{'name'} (item in trash)");
                 next;
             }
 
@@ -1751,21 +1762,21 @@ sub _path_resolve {
         DEBUG("Looking up part $part (folder_id=$folder_id)");
 
         # We append to 'q' parameter in case the user provided it
-        my $title = $part =~ s{\'}{\\\'}xmsgr;
+        my $name = $part =~ s{\'}{\\\'}xmsgr;
         if ( defined $search_opts->{'q'} && length $search_opts->{'q'} ) {
             $search_opts->{'q'} .= ' AND ';
         } else {
             $search_opts->{'q'} = '';
         }
-        $search_opts->{'q'} .= "title = '$title'";
+        $search_opts->{'q'} .= "name = '$name'";
 
         my $children = $self->children_by_folder_id( $folder_id, {}, $search_opts )
             or return;
 
         for my $child (@$children) {
-            DEBUG("Found child: $child->{'title'}");
+            DEBUG("Found child: " . $child->name() );
 
-            if ( $child->{'title'} eq $part ) {
+            if ( $child->name() eq $part ) {
                 $folder_id = $child->{'id'};
                 unshift @ids, $folder_id;
                 $parent = $folder_id;
@@ -2395,9 +2406,9 @@ is an object composed of the JSON data returned by the Google Drive API.
 Each object offers methods named like the fields in the JSON data, e.g.
 C<originalFilename()>, C<downloadUrl>, etc.
 
-Will return all entries found unless C<maxResults> is set:
+Will return all entries found unless C<pageSize> is set:
 
-    my $children = $gd->children( "/path/to", { maxResults => 3 } )
+    my $children = $gd->children( "/path/to", { pageSize => 3 } )
 
 Due to the somewhat capricious ways Google Drive handles its directory
 structures, the method needs to traverse the path component by component
@@ -2414,7 +2425,7 @@ Each child comes back as a files#resource type and gets mapped into
 an object that offers access to the various fields via methods:
 
     for my $child ( @$children ) {
-        print $child->kind(), " ", $child->title(), "\n";
+        print $child->kind(), " ", $child->name(), "\n";
     }
 
 Please refer to

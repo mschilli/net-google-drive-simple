@@ -531,7 +531,7 @@ sub update_comment {
         'http_method' => HTTP_METHOD_PATCH(),
     };
 
-    return $self->_update_api_method( $info, $options );
+    return $self->_handle_api_method( $info, $options );
 }
 
 # --- files
@@ -636,7 +636,7 @@ sub create_file {
         LOGDIE("[$info->{'method_name'}] Creating files in multiple folders is no longer supported");
     }
 
-    return $self->_update_api_method( $info, $options );
+    return $self->_handle_api_method( $info, $options );
 }
 
 # Uploading file
@@ -723,7 +723,7 @@ sub delete_file {
         LOGDIE("[$info->{'method_name'}] If an item is not in a shared drive and its last parent is deleted but the item itself is not, the item will be placed under its owner's root");
     }
 
-    return $self->http_json( $info, $options );
+    return $self->_handle_api_method( $info, $options );
 }
 
 ###########################################

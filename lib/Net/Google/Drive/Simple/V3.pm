@@ -1655,7 +1655,11 @@ sub children {
     DEBUG("Determine children of $path");
     LOGDIE("No $path given") unless defined $path;
 
+    $opts        //= {};
     $search_opts //= {};
+
+    $opts->{'maxResults'}
+        and LOGDIE("'maxResults' not supported, use 'pagesize' instead");
 
     my ( $folder_id, $parent ) = $self->_path_resolve( $path, $search_opts );
 
@@ -1669,25 +1673,24 @@ sub children {
     return $children;
 }
 
-# "'page' => 1" is now "'auto_paging' => 1"
 ###########################################
 sub children_by_folder_id {
 ###########################################
     my ( $self, $folder_id, $opts, $search_opts ) = @_;
 
     $folder_id
-        or LOGDIE("Must provide a folder id");
+        or LOGDIE('Must provide a folder id');
 
     $self->init();
 
-    $search_opts = {} unless defined $search_opts;
     $opts        = {} unless defined $opts;
+    $search_opts = {} unless defined $search_opts;
 
     exists $search_opts->{'page'}
         and LOGDIE("Search option 'page' is deprecated, use 'auto_paging'");
 
     exists $search_opts->{'title'}
-        and LOGDIE("Search option 'title' is deprecated, set 'q' parameter accordingly");
+        and LOGDIE("Search option 'title' is deprecated, set 'q' parameter with 'name' accordingly");
 
     $search_opts->{'auto_paging'} //= 1;
 

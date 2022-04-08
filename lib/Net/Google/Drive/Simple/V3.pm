@@ -179,7 +179,7 @@ sub _handle_api_method {
 
     # We yank out all the body parameters so we don't validate them
     # TODO: Support body parameter validation
-    $info->{'body_params'} //= $self->_prepare_body_options( $options, $info->{'body_parameters'} );
+    $info->{'body_parameters'} //= $self->_prepare_body_options( $options, $info->{'body_parameters'} );
 
     # We validate the options left
     $self->_validate_param_type( $method, $info->{'query_parameters'}, $options );

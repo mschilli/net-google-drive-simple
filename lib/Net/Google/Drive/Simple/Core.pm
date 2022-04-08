@@ -169,8 +169,8 @@ sub _generate_request {
     );
 
     my $post_data;
-    if ( $info->{'body_params'} ) {
-        $post_data = to_json( $info->{'body_params'} );
+    if ( $info->{'body_parameters'} ) {
+        $post_data = to_json( $info->{'body_parameters'} );
 
         if ( !$info->{'multipart'} ) {
             push @headers, 'Content-Type', 'application/json';
@@ -202,7 +202,7 @@ sub _generate_request {
             . $post_data;
 
         my $part2
-            = "Content-type: $info->{'body_params'}{'mimeType'}\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+            = "Content-type: $info->{'body_parameters'}{'mimeType'}\r\nContent-Transfer-Encoding: base64\r\n\r\n"
             . MIME::Base64::encode_base64($content);
 
         my $body = "--my-boundary\r\n$part1\r\n"

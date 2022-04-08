@@ -26,6 +26,13 @@ my $gd_test = Test::MockModule->new('Net::Google::Drive::Simple::V3');
 my @called;
 $gd_test->redefine( 'init' => sub { push @called, 'init' } );
 
+# We don't want to accidentally trigger oauth getting mad
+# TODO: Move these headers till the request?
+my $mock_oauth = Test::MockModule->new('OAuth::Cmdline');
+if ( !$ENV{'LIVE_TEST'} ) {
+    $mock_oauth->redefine( 'authorization_headers', sub {()} );
+}
+
 subtest(
     'Complex checks from info' => sub {
         @called = ();

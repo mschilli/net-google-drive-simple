@@ -23,6 +23,8 @@ use constant {
     'TYPE_BOOLEAN' => 'boolean',
     'TYPE_OBJECT'  => 'object',
     'TYPE_BYTES'   => 'bytes',
+
+    'SIZE_5MB'     => 5_242_880, # 5M
 };
 
 our $VERSION = '3.01';
@@ -645,7 +647,7 @@ sub upload_media_file {
         or LOGDIE("upload_media_file() received non-existent/unreadable file: $file");
 
     my $size = -s $file;
-    $size <= 5_242_880 # 5M
+    $size <= SIZE_5MB()
         or LOGDIE("upload_media_file() has a limit of 5M, '$file' is bigger");
 
     $options //= {};
@@ -700,7 +702,7 @@ sub upload_multipart_file {
         or LOGDIE("upload_multipart_file() received non-existent/unreadable file: $file");
 
     my $size = -s $file;
-    $size <= 5_242_880 # 5M
+    $size <= SIZE_5MB()
         or LOGDIE("upload_multipart_file() has a limit of 5M, '$file' is bigger");
 
     $options //= {};

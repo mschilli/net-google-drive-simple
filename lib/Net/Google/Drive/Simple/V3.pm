@@ -2130,16 +2130,36 @@ This one is for creating metadata for a file.
 You can read about the parameters on the Google Drive
 L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
 
-=head2 C<upload_file>
+=head2 C<upload_media_file>
 
-    my $file = $gd->upload_file({%params});
+    my $file = $gd->upload_media_file( $filename, {%params} );
+
+Parameters are optional.
 
 This serves the path to C</files>.
 
 This is also known as C<files.create>.
 
 This one is for uploading a file, even though it shares a moniker with the
-C<create_file()> method in the Google Drive API.
+C<create_file()> method in the Google Drive API. There is a limitation of 5MB
+for the file.
+
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
+
+=head2 C<upload_multimedia_file>
+
+    my $file = $gd->upload_multimedia_file( $filename, {%params} );
+
+Parameters are optional.
+
+This serves the path to C</files>.
+
+This is also known as C<files.create>.
+
+This one is for uploading a file, even though it shares a moniker with the
+C<create_file()> method in the Google Drive API. There is a limitation of 5MB
+for the file.
 
 You can read about the parameters on the Google Drive
 L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.

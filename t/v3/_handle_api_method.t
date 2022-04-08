@@ -17,7 +17,7 @@ can_ok(
         _handle_deprecated_params
         _handle_complex_types
         _generate_uri
-        http_json
+        _make_request
     >,
 );
 
@@ -31,10 +31,10 @@ subtest(
         @called = ();
 
         $gd_test->redefine(
-            'http_json' => sub {
+            '_make_request' => sub {
                 my ( $self, $uri, $http_opts ) = @_;
 
-                push @called, 'http_json';
+                push @called, '_make_request';
             },
         );
 
@@ -94,21 +94,23 @@ subtest(
         @called = ();
 
         $gd_test->redefine(
-            'http_json' => sub {
-                my ( $self, $uri, $http_opts ) = @_;
+            '_make_request' => sub {
+                my ( $self, $req ) = @_;
 
-                push @called, 'http_json';
+                push @called, '_make_request';
 
-                isa_ok( $uri, 'URI' );
+                isa_ok( $req, 'HTTP::Request' );
                 is(
-                    $uri->as_string(),
+                    $req->uri(),
                     "$gd->{'api_base_url'}test?foo=10",
                     'Correct GET URI',
                 );
 
-                is( $http_opts->[0], 'GET', 'Correct HTTP method' );
+                is( $req->method(), 'GET', 'Correct HTTP method' );
 
-                is( $http_opts->[1], undef,
+                is(
+                    $req->content(),
+                    '',
                     'No body parameters with a GET request',
                 );
 
@@ -130,11 +132,11 @@ subtest(
         is(
             $gd->_handle_api_method( $info, $options ),
             { 'key' => 'value' },
-            '_handle_api_method() returned values from http_json()',
+            '_handle_api_method() returned values from _make_request()',
         );
 
-        is( \@called, [qw< init http_json >],
-            'init() and http_json() were called',
+        is( \@called, [qw< init _make_request >],
+            'init() and _make_request() were called',
         );
     }
 );
@@ -145,24 +147,27 @@ subtest(
             @called = ();
 
             $gd_test->redefine(
-                'http_json' => sub {
-                    my ( $self, $uri, $http_opts ) = @_;
+                '_make_request' => sub {
+                    my ( $self, $req ) = @_;
 
-                    push @called, 'http_json';
+                    push @called, '_make_request';
 
-                    isa_ok( $uri, 'URI' );
+                    isa_ok( $req, 'HTTP::Request' );
                     is(
-                        $uri->as_string(),
+                        $req->uri(),
                         "$gd->{'api_base_url'}test?foo=10",
                         "Correct $http_method URI",
                     );
 
-                    is( $http_opts->[0], $http_method,
-                        'Correct HTTP method' );
+                    is(
+                        $req->method(),
+                        $http_method,
+                        'Correct HTTP method',
+                    );
 
                     is(
-                        $http_opts->[1],
-                        { 'bar' => 'bar_value' },
+                        $req->content(),
+                        '{"bar":"bar_value"}',
                         "Got correct body parameters with a $http_method request",
                     );
 
@@ -186,11 +191,11 @@ subtest(
             is(
                 $gd->_handle_api_method( $info, $options ),
                 { 'key' => 'value' },
-                '_handle_api_method() returned values from http_json()',
+                '_handle_api_method() returned values from _make_request()',
             );
 
-            is( \@called, [qw< init http_json >],
-                'init() and http_json() were called',
+            is( \@called, [qw< init _make_request>],
+                'init() and _make_request() were called',
             );
         }
     }
@@ -201,23 +206,23 @@ subtest(
         @called = ();
 
         $gd_test->redefine(
-            'http_json' => sub {
-                my ( $self, $uri, $http_opts ) = @_;
+            '_make_request' => sub {
+                my ( $self, $req ) = @_;
 
-                push @called, 'http_json';
+                push @called, '_make_request';
 
-                isa_ok( $uri, 'URI' );
+                isa_ok( $req, 'HTTP::Request' );
                 is(
-                    $uri->as_string(),
+                    $req->uri(),
                     "$gd->{'api_base_url'}test",
                     'Correct DELETE URI',
                 );
 
-                is( $http_opts->[0], 'DELETE', 'Correct HTTP method' );
+                is( $req->method(), 'DELETE', 'Correct HTTP method' );
 
                 is(
-                    $http_opts->[1],
-                    undef,
+                    $req->content(),
+                    '',
                     'No body parameters with a DELETE request',
                 );
 
@@ -236,11 +241,11 @@ subtest(
         is(
             $gd->_handle_api_method( $info, $options ),
             { 'key' => 'value' },
-            '_handle_api_method() returned values from http_json()',
+            '_handle_api_method() returned values from _make_request()',
         );
 
-        is( \@called, [qw< init http_json >],
-            'init() and http_json() were called',
+        is( \@called, [qw< init _make_request >],
+            'init() and _make_request() were called',
         );
     }
 );

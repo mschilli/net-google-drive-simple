@@ -21,7 +21,8 @@ can_ok(
         update_comment
         copy_file
         create_file
-        upload_file
+        upload_media_file
+        upload_multipart_file
         delete_file
         export_file
         generateIds

@@ -180,8 +180,10 @@ sub _handle_api_method {
     my $method = $info->{'method_name'};
 
     # We yank out all the body parameters so we don't validate them
+    # We reuse the same key to store the key + value this time (instead of which keys to use in options)
     # TODO: Support body parameter validation
-    $info->{'body_parameters'} //= $self->_prepare_body_options( $options, $info->{'body_parameters'} );
+    my $body_parameters = delete $info->{'body_parameters'};
+    $info->{'body_parameters'} //= $self->_prepare_body_options( $options, $body_parameters );
 
     # We validate the options left
     $self->_validate_param_type( $method, $info->{'query_parameters'}, $options );

@@ -10,6 +10,7 @@ use HTTP::Request  ();
 
 use File::MMagic ();
 use IO::File     ();
+use MIME::Base64 ();
 
 use OAuth::Cmdline::CustomFile  ();
 use OAuth::Cmdline::GoogleDrive ();
@@ -155,6 +156,93 @@ sub http_loop {
     return $resp;
 }
 
+###########################################
+sub _generate_request {
+###########################################
+    my ( $self, $url, $info ) = @_;
+
+    # default verb and headers
+    my $verb    = $info->{'http_method'};
+    my @headers = (
+        $self->{'oauth'}->authorization_headers(),
+        @{ $info->{'extra_headers'} || [] },
+    );
+
+    my $post_data;
+    if ( $info->{'body_parameters'} ) {
+        $post_data = to_json( $info->{'body_parameters'} );
+
+        if ( !$info->{'multipart'} ) {
+            push @headers, 'Content-Type', 'application/json';
+        }
+    }
+
+    # We might still have file content, with or without post data
+    # Handle GET / DELETE ("content" key might not actually existed)
+    my $content;
+    if ( $verb !~ /^( GET | DELETE )$/xms ) {
+        # Try to copy over content
+        $content = $info->{'body_content'};
+
+        # If this is not multipart, we can either have content or post_data
+        # but since we have no content, we use post_data and clear the var instead
+        if ( !$content && !$info->{'multipart'} ) {
+            $content = $post_data;
+            undef $post_data;
+        }
+    }
+
+    if ( $info->{'multipart'} ) {
+        # We have both $content and $post_data
+        # The $content is the file content
+        # The $post_data is the JSON content
+        # We need to create a new body from them
+
+        my $part1 = "Content-type: application/json; charset=UTF-8\r\n\r\n"
+            . $post_data;
+
+        my $part2
+            = "Content-type: $info->{'body_parameters'}{'mimeType'}\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+            . MIME::Base64::encode_base64($content);
+
+        my $body = "--my-boundary\r\n$part1\r\n"
+            . "--my-boundary\r\n$part2\r\n"
+            . "--my-boundary--\r\n";
+
+        use bytes;
+        push @headers, 'Content-type'   => 'multipart/related; boundary="my-boundary"',
+                       'Content-Length' => length $body;
+
+        $content = $body;
+    }
+
+    my $req = HTTP::Request->new(
+        $verb,
+        $url->as_string(),
+        \@headers,
+        $content,
+    );
+
+    return $req;
+}
+
+###########################################
+sub _make_request {
+###########################################
+    my ( $self, $req ) = @_;
+
+    my $resp = $self->http_loop($req);
+    if ( $resp->is_error() ) {
+        $self->error( $resp->message() );
+        return;
+    }
+
+    # v3 returns 204 on DELETE for no content
+    my $data = $resp->code() == 204 ? {} : from_json( $resp->content() );
+    return $data;
+}
+
+# This is only for v2, v3 has something more flexible
 ###########################################
 sub http_json {
 ###########################################

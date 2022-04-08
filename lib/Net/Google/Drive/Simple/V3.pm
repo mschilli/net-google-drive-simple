@@ -8,6 +8,7 @@ use parent qw< Net::Google::Drive::Simple::Core >;
 
 use URI ();
 use URI::QueryParam ();
+use File::Basename ();
 use Log::Log4perl qw(:easy);
 
 use constant {
@@ -22,6 +23,8 @@ use constant {
     'TYPE_BOOLEAN' => 'boolean',
     'TYPE_OBJECT'  => 'object',
     'TYPE_BYTES'   => 'bytes',
+
+    'SIZE_5MB'     => 5_242_880, # 5M
 };
 
 our $VERSION = '3.01';
@@ -177,8 +180,10 @@ sub _handle_api_method {
     my $method = $info->{'method_name'};
 
     # We yank out all the body parameters so we don't validate them
+    # We reuse the same key to store the key + value this time (instead of which keys to use in options)
     # TODO: Support body parameter validation
-    my $body_options = $self->_prepare_body_options( $options, $info->{'body_parameters'} );
+    my $body_parameters = delete $info->{'body_parameters'};
+    $info->{'body_parameters'} //= $self->_prepare_body_options( $options, $body_parameters );
 
     # We validate the options left
     $self->_validate_param_type( $method, $info->{'query_parameters'}, $options );
@@ -210,16 +215,8 @@ sub _handle_api_method {
 
     # We generate the URI path
     my $uri = $self->_generate_uri( $info->{'path'}, $options );
-
-    # GET requests cannot have a body
-    if (   $info->{'http_method'} eq HTTP_METHOD_GET()
-        || $info->{'http_method'} eq HTTP_METHOD_DELETE() )
-    {
-        undef $body_options;
-    }
-
-    # We make the request and get a response
-    return $self->http_json( $uri, [ $info->{'http_method'}, $body_options ] );
+    my $req = $self->_generate_request( $uri, $info );
+    return $self->_make_request($req);
 }
 
 # --- about
@@ -639,17 +636,27 @@ sub create_file {
     return $self->_handle_api_method( $info, $options );
 }
 
-# Uploading file
+# Uploading file (uploadType=media)
 ###########################################
-sub upload_file {
+sub upload_media_file {
 ###########################################
-    my ( $self, $options ) = @_;
+    my ( $self, $file, $options ) = @_;
 
-    ref $options eq 'HASH'
-        or LOGDIE('upload_file() missing parameters');
+    defined $file && length $file
+        or LOGDIE('upload_media_file() missing file');
 
-    # TODO: Use this
-    my $max_filesize = 5_120_000_000_000; # 5120GB
+    -r $file
+        or LOGDIE("upload_media_file() received non-existent/unreadable file: $file");
+
+    my $size = -s $file;
+    $size <= SIZE_5MB()
+        or LOGDIE("upload_media_file() has a limit of 5M, '$file' is bigger");
+
+    $options //= {};
+
+    $options->{'uploadType'} = 'media';
+
+    my $mimeType = delete $options->{'mimeType'} // $self->file_mime_type($file);
 
     my $info = {
         'query_parameters' => {
@@ -664,37 +671,113 @@ sub upload_file {
             'useContentAsIndexableText' => [ TYPE_BOOLEAN(), 0 ]
         },
 
-        'body_parameters' => [ qw<
-            appProperties
-            contentHints
-            contentRestrictions
-            copyRequiresWriterPermission
-            createdTime
-            description
-            folderColorRgb
-            id
-            mimeType
-            modifiedTime
-            name
-            originalFilename
-            parents
-            properties
-            shortcutDetails.targetId
-            starred
-            viewedByMeTime
-            writersCanShare
-        > ],
-
-        'path'        => $self->{'api_upload_url'},
-        'method_name' => 'upload_file',
-        'http_method' => HTTP_METHOD_POST(),
+        'path'                => $self->{'api_upload_url'},
+        'method_name'         => 'upload_media_file',
+        'http_method'         => HTTP_METHOD_POST(),
+        'body_content'        => $self->_content_sub($file),
+        'extra_headers'       => [
+            'Content-Type'   => $mimeType,
+            'Content-Length' => $size,
+        ],
     };
 
     if ( defined $options->{'enforceSingleParent'} ) {
         LOGDIE("[$info->{'method_name'}] Creating files in multiple folders is no longer supported");
     }
 
-    return $self->_update_api_method( $info, $options );
+    # Since a file upload can take a long time, refresh the token
+    # just in case.
+    $self->{'oauth'}->token_expire();
+
+    return $self->_handle_api_method( $info, $options );
+}
+
+###########################################
+sub upload_multipart_file {
+###########################################
+    my ( $self, $file, $options ) = @_;
+
+    defined $file && length $file
+        or LOGDIE('upload_multipart_file() missing file');
+
+    -r $file
+        or LOGDIE("upload_multipart_file() received non-existent/unreadable file: $file");
+
+    my $size = -s $file;
+    $size <= SIZE_5MB()
+        or LOGDIE("upload_multipart_file() has a limit of 5M, '$file' is bigger");
+
+    $options //= {};
+
+    $options->{'name'}     //= File::Basename::basename($file);
+    $options->{'mimeType'} //= $self->file_mime_type($file);
+    $options->{'uploadType'} = 'multipart';
+
+    # TODO: Wouldn't it be great to support Chunking with a callback?
+    my $file_content;
+    {
+        open my $fh, '<', $file
+            or LOGDIE("File '$file' cannot be open for reading");
+
+        undef $/;
+        $file_content = <$fh>;
+
+        close $fh
+            or LOGDIE("File '$file' cannot be closed after reading");
+    }
+
+    my $info = {
+        'query_parameters' => {
+            'uploadType'                => [ TYPE_STRING(),  1 ],
+            'enforceSingleParent'       => [ TYPE_BOOLEAN(), 0 ],
+            'ignoreDefaultVisibility'   => [ TYPE_BOOLEAN(), 0 ],
+            'includePermissionsForView' => [ TYPE_STRING(),  0 ],
+            'keepRevisionForever'       => [ TYPE_BOOLEAN(), 0 ],
+            'ocrLanguage'               => [ TYPE_STRING(),  0 ],
+            'supportsAllDrives'         => [ TYPE_BOOLEAN(), 0 ],
+            'supportsTeamDrives'        => [ TYPE_BOOLEAN(), 0 ],
+            'useContentAsIndexableText' => [ TYPE_BOOLEAN(), 0 ]
+        },
+
+        'body_parameters' => [
+            qw<
+                appProperties
+                contentHints
+                contentRestrictions
+                copyRequiresWriterPermission
+                createdTime
+                description
+                folderColorRgb
+                id
+                mimeType
+                modifiedTime
+                name
+                originalFilename
+                parents
+                properties
+                shortcutDetails.targetId
+                starred
+                viewedByMeTime
+                writersCanShare
+            >
+        ],
+
+        'path'          => $self->{'api_upload_url'},
+        'method_name'   => 'upload_multipart_file',
+        'http_method'   => HTTP_METHOD_POST(),
+        'multipart'     => 1,
+        'body_content'  => $file_content,
+    };
+
+    if ( defined $options->{'enforceSingleParent'} ) {
+        LOGDIE("[$info->{'method_name'}] Creating files in multiple folders is no longer supported");
+    }
+
+    # Since a file upload can take a long time, refresh the token
+    # just in case.
+    $self->{'oauth'}->token_expire();
+
+    return $self->_handle_api_method( $info, $options );
 }
 
 ###########################################
@@ -2047,16 +2130,36 @@ This one is for creating metadata for a file.
 You can read about the parameters on the Google Drive
 L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
 
-=head2 C<upload_file>
+=head2 C<upload_media_file>
 
-    my $file = $gd->upload_file({%params});
+    my $file = $gd->upload_media_file( $filename, {%params} );
+
+Parameters are optional.
 
 This serves the path to C</files>.
 
 This is also known as C<files.create>.
 
 This one is for uploading a file, even though it shares a moniker with the
-C<create_file()> method in the Google Drive API.
+C<create_file()> method in the Google Drive API. There is a limitation of 5MB
+for the file.
+
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
+
+=head2 C<upload_multimedia_file>
+
+    my $file = $gd->upload_multimedia_file( $filename, {%params} );
+
+Parameters are optional.
+
+This serves the path to C</files>.
+
+This is also known as C<files.create>.
+
+This one is for uploading a file, even though it shares a moniker with the
+C<create_file()> method in the Google Drive API. There is a limitation of 5MB
+for the file.
 
 You can read about the parameters on the Google Drive
 L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.

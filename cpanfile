@@ -3,6 +3,7 @@ use warnings;
 
 on 'runtime' => sub {
     requires 'File::MMagic'         => '1.29';
+    requires 'MIME::Base64'         => '3.00';
     requires 'JSON'                 => '2.53';
     requires 'Log::Log4perl'        => '1';
     requires 'LWP::Protocol::https' => '6.04';
@@ -31,6 +32,9 @@ on 'develop' => sub {
     requires 'Test::CPAN::Changes' => '0.4';
     requires 'Test::CPAN::Meta';
     requires 'Test::Kwalitee' => '1.22';
+    requires 'Test::Pod';
     requires 'Test::Pod::Coverage';
+    requires 'Test::Spelling';
     requires 'Test::Pod::Spelling::CommonMistakes' => '1.000';
+    requires 'Test::Version';
 };

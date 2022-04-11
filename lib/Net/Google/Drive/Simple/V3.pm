@@ -134,7 +134,7 @@ sub _generate_uri {
     my ( $self, $path, $options ) = @_;
     my $uri = URI->new( $path =~ /^http/xms ? $path : $self->{'api_base_url'} . $path );
 
-    $options
+    %{$options}
         and $uri->query_form($options);
 
     return $uri;

@@ -9,13 +9,18 @@ use parent qw< Net::Google::Drive::Simple::Core >;
 use URI ();
 use URI::QueryParam ();
 use File::Basename ();
+use JSON qw< from_json >;
 use Log::Log4perl qw(:easy);
 
 use constant {
     'HTTP_METHOD_GET'    => 'GET',
     'HTTP_METHOD_POST'   => 'POST',
+    'HTTP_METHOD_PUT'    => 'PUT',
     'HTTP_METHOD_PATCH'  => 'PATCH',
     'HTTP_METHOD_DELETE' => 'DELETE',
+
+    'HTTP_CODE_OK'     => 200,
+    'HTTP_CODE_RESUME' => 308,
 
     'TYPE_STRING'  => 'string',
     'TYPE_INTEGER' => 'integer',
@@ -24,8 +29,12 @@ use constant {
     'TYPE_OBJECT'  => 'object',
     'TYPE_BYTES'   => 'bytes',
 
-    'SIZE_5MB'     => 5_242_880, # 5M
+    'SIZE_256K'   => 262_144,          # default chunk size
+    'SIZE_5MB'    => 5_242_880,        # low limit
+    'SIZE_5120GB' => 5_497_558_138_880 # high limit
 };
+
+use constant { 'DEF_CHUNK_SIZE' => SIZE_5MB() * 2 }; # 10MB
 
 our $VERSION = '3.01';
 
@@ -216,7 +225,12 @@ sub _handle_api_method {
     # We generate the URI path
     my $uri = $self->_generate_uri( $info->{'path'}, $options );
     my $req = $self->_generate_request( $uri, $info );
-    return $self->_make_request($req);
+
+    if ( $info->{'return_http_request'} ) {
+        return $req;
+    }
+
+    return $self->_make_request( $req, $info->{'return_http_response'} );
 }
 
 # --- about
@@ -778,6 +792,343 @@ sub upload_multipart_file {
     $self->{'oauth'}->token_expire();
 
     return $self->_handle_api_method( $info, $options );
+}
+
+###########################################
+sub create_resumable_upload_for {
+###########################################
+    my ( $self, $file, $options ) = @_;
+
+    defined $file && length $file
+        or LOGDIE('create_resumable_upload_for() missing file');
+
+    -r $file
+        or LOGDIE("create_resumable_upload_for() received non-existent/unreadable file: $file");
+
+    my $size = -s $file;
+    $size <= SIZE_5120GB()
+        or LOGDIE("create_resumavble_upload_for() has a limit of 5120G, '$file' is bigger");
+
+    $options //= {};
+
+    $options->{'name'}     //= File::Basename::basename($file);
+    $options->{'mimeType'} //= $self->file_mime_type($file);
+    $options->{'uploadType'} = 'resumable';
+
+    my @extra_headers = (
+        'X-Upload-Content-Type'   => $options->{'mimeType'},
+        'X-Upload-Content-Length' => $size,
+    );
+
+    # Do we have metadata other than uploadType?
+    if ( keys %{$options} > 1 ) {
+        push @extra_headers, 'Content-Type' => 'application/json; charset=UTF-8';
+    }
+
+    my $info = {
+        'query_parameters' => {
+            'uploadType'                => [ TYPE_STRING(),  1 ],
+            'enforceSingleParent'       => [ TYPE_BOOLEAN(), 0 ],
+            'ignoreDefaultVisibility'   => [ TYPE_BOOLEAN(), 0 ],
+            'includePermissionsForView' => [ TYPE_STRING(),  0 ],
+            'keepRevisionForever'       => [ TYPE_BOOLEAN(), 0 ],
+            'ocrLanguage'               => [ TYPE_STRING(),  0 ],
+            'supportsAllDrives'         => [ TYPE_BOOLEAN(), 0 ],
+            'supportsTeamDrives'        => [ TYPE_BOOLEAN(), 0 ],
+            'useContentAsIndexableText' => [ TYPE_BOOLEAN(), 0 ]
+        },
+
+        'body_parameters' => [
+            qw<
+                appProperties
+                contentHints
+                contentRestrictions
+                copyRequiresWriterPermission
+                createdTime
+                description
+                folderColorRgb
+                id
+                mimeType
+                modifiedTime
+                name
+                originalFilename
+                parents
+                properties
+                shortcutDetails.targetId
+                starred
+                viewedByMeTime
+                writersCanShare
+            >
+        ],
+
+        'path'                 => $self->{'api_upload_url'},
+        'method_name'          => 'create_resumable_upload',
+        'http_method'          => HTTP_METHOD_POST(),
+        'extra_headers'        => \@extra_headers,
+        'resumable'            => 1,
+        'return_http_response' => 1,
+    };
+
+    if ( defined $options->{'enforceSingleParent'} ) {
+        LOGDIE("[$info->{'method_name'}] Creating files in multiple folders is no longer supported");
+    }
+
+    # Since a file upload can take a long time, refresh the token
+    # just in case.
+    $self->{'oauth'}->token_expire();
+
+    my $response = $self->_handle_api_method( $info, $options );
+    $response->is_success()
+        or return;
+
+    my $location = $response->header('Location');
+    return $location || '';
+}
+
+###########################################
+sub create_resumable_upload {
+###########################################
+    my ( $self, $options ) = @_;
+
+    $options //= {};
+    $options->{'uploadType'} = 'resumable';
+
+    my @extra_headers;
+    if ( my $mimeType = delete $options->{'mediaType'} ) {
+        push @extra_headers, 'X-Upload-Content-Type' => $mimeType;
+    }
+
+    # Do we have metadata other than uploadType?
+    if ( keys %{$options} > 1 ) {
+        push @extra_headers, 'Content-Type' => 'application/json; charset=UTF-8';
+    }
+
+    my $info = {
+        'query_parameters' => {
+            'uploadType'                => [ TYPE_STRING(),  1 ],
+            'enforceSingleParent'       => [ TYPE_BOOLEAN(), 0 ],
+            'ignoreDefaultVisibility'   => [ TYPE_BOOLEAN(), 0 ],
+            'includePermissionsForView' => [ TYPE_STRING(),  0 ],
+            'keepRevisionForever'       => [ TYPE_BOOLEAN(), 0 ],
+            'ocrLanguage'               => [ TYPE_STRING(),  0 ],
+            'supportsAllDrives'         => [ TYPE_BOOLEAN(), 0 ],
+            'supportsTeamDrives'        => [ TYPE_BOOLEAN(), 0 ],
+            'useContentAsIndexableText' => [ TYPE_BOOLEAN(), 0 ]
+        },
+
+        'body_parameters' => [
+            qw<
+                appProperties
+                contentHints
+                contentRestrictions
+                copyRequiresWriterPermission
+                createdTime
+                description
+                folderColorRgb
+                id
+                mimeType
+                modifiedTime
+                name
+                originalFilename
+                parents
+                properties
+                shortcutDetails.targetId
+                starred
+                viewedByMeTime
+                writersCanShare
+            >
+        ],
+
+        'path'                 => $self->{'api_upload_url'},
+        'method_name'          => 'create_resumable_upload',
+        'http_method'          => HTTP_METHOD_POST(),
+        'extra_headers'        => \@extra_headers,
+        'resumable'            => 1,
+        'return_http_response' => 1,
+    };
+
+    if ( defined $options->{'enforceSingleParent'} ) {
+        LOGDIE("[$info->{'method_name'}] Creating files in multiple folders is no longer supported");
+    }
+
+    # Since a file upload can take a long time, refresh the token
+    # just in case.
+    $self->{'oauth'}->token_expire();
+
+    my $response = $self->_handle_api_method( $info, $options );
+    $response->is_success()
+        or return;
+
+    my $location = $response->header('Location');
+    return $location || '';
+}
+
+###########################################
+sub upload_file_content_single {
+###########################################
+    my ( $self, $upload_uri, $file ) = @_;
+
+    defined $upload_uri && length $upload_uri
+        or LOGDIE('upload_file_content_single() missing upload_uri');
+
+    $upload_uri =~ m{^https://.*upload_id=.+}xms
+        or LOGDIE('upload_file_content_single() upload_uri seems malformed');
+
+    defined $file && length $file
+        or LOGDIE('upload_file_content_single() missing file');
+
+    -r $file
+        or LOGDIE("upload_file_content_single() received non-existent/unreadable file: $file");
+
+    my $size = -s $file;
+    $size <= SIZE_5120GB()
+        or LOGDIE("upload_file_content_single() has a limit of 5120G, '$file' is bigger");
+
+    my $info = {
+        'path'          => $upload_uri,
+        'method_name'   => 'upload_file_content_single',
+        'http_method'   => HTTP_METHOD_PUT(),
+        'body_content'  => $self->_content_sub($file),
+    };
+
+    # Since a file upload can take a long time, refresh the token
+    # just in case.
+    $self->{'oauth'}->token_expire();
+
+    return $self->_handle_api_method( $info, {} );
+}
+
+###########################################
+sub upload_file_content_multiple {
+###########################################
+    my ( $self, $upload_uri, $file, $chunk_size ) = @_;
+
+    defined $upload_uri && length $upload_uri
+        or LOGDIE('upload_file_content_multiple() missing upload_uri');
+
+    $upload_uri =~ m{^https://.*upload_id=.+}xms
+        or LOGDIE('upload_file_content_multiple() upload_uri seems malformed');
+
+    defined $file && length $file
+        or LOGDIE('upload_file_content_multiple() missing file');
+
+    -r $file
+        or LOGDIE("upload_file_content_multiple() received non-existent/unreadable file: $file");
+
+    my $size = -s $file;
+    $size <= SIZE_5120GB()
+        or LOGDIE("upload_file_content_multiple() has a limit of 5120G, '$file' is bigger");
+
+    # By upload in 10MB chunks
+    # But you can provide the amount of bytes instead
+    $chunk_size //= DEF_CHUNK_SIZE();
+
+    $chunk_size > 0
+        or LOGDIE('upload_file_content_multiple() must have a chunk size above 0');
+
+    $chunk_size % SIZE_256K() == 0
+        or LOGDIE('upload_file_content_multiple() chunk size must divide by 256K');
+
+    my $iter = $self->upload_file_content_iterator( $upload_uri, $file, $chunk_size );
+    while ( my $request = $iter->() ) {
+        my $response = $self->_make_request( $request, 1 );
+        # 200           - means we're done
+        # 308           - means continue
+        # anything else - we're confused, so it's an error no matter what
+
+        if ( $response->code() == HTTP_CODE_OK() ) {
+            return from_json( $response->decoded_content() );
+        }
+
+        if ( $response->code() != HTTP_CODE_RESUME() ) {
+            LOGDIE( "Triggered error: " . $response->code() );
+        }
+    }
+
+    return;
+}
+
+###########################################
+sub upload_file_content_iterator {
+###########################################
+    my ( $self, $upload_uri, $file, $chunk_size ) = @_;
+
+    defined $upload_uri && length $upload_uri
+        or LOGDIE('upload_file_content_multiple() missing upload_uri');
+
+    $upload_uri =~ m{^https://.*upload_id=.+}xms
+        or LOGDIE('upload_file_content_multiple() upload_uri seems malformed');
+
+    defined $file && length $file
+        or LOGDIE('upload_file_content_multiple() missing file');
+
+    -r $file
+        or LOGDIE("upload_file_content_multiple() received non-existent/unreadable file: $file");
+
+    my $size = -s $file;
+    $size <= SIZE_5120GB()
+        or LOGDIE("upload_file_content_multiple() has a limit of 5120G, '$file' is bigger");
+
+    # By upload in 10MB chunks
+    # But you can provide the amount of bytes instead
+    $chunk_size //= DEF_CHUNK_SIZE();
+
+    $chunk_size > 0
+        or LOGDIE('upload_file_content_multiple() must have a chunk size above 0');
+
+    $chunk_size % SIZE_256K() == 0
+        or LOGDIE('upload_file_content_multiple() chunk size must divide by 256K');
+
+    # How many chunks are we going to iterate over
+    # size in bytes divided by 256K (chunk size)
+    my $chunks = ( $size / $chunk_size );
+
+    # One more if there's a tail
+    $size % $chunk_size
+        and $chunks++;
+
+    my $position = 0;
+    my $iter     = sub {
+        $chunks-- == 0
+            and return;
+
+        my $start_position = $position;
+
+        # TODO: Should we take the approach of _content_sub with opening usnig IO::File?
+        open my $fh, '<', $file
+            or LOGDIE("File '$file' cannot be open for reading");
+
+        my $content;
+        sysseek $fh, $start_position, 0;
+        my $bytes_read = sysread $fh, $content, $chunk_size;
+        $position += $bytes_read;
+
+        close $fh
+            or LOGDIE("File '$file' cannot be closed after reading");
+
+        my $info = {
+            'path'                 => $upload_uri,
+            'method_name'          => 'upload_file_content_multiple',
+            'http_method'          => HTTP_METHOD_PUT(),
+            'return_http_request'  => 1,
+            'body_content'         => $content,
+            'extra_headers'        => [
+                'Content-Length' => $bytes_read,
+                'Content-Range'  => "bytes $start_position-"
+                    . ( $position - 1 )
+                    . "/$size" #. ( $position + $bytes_read ),
+            ],
+        };
+
+        # Since a file upload can take a long time, refresh the token
+        # just in case.
+        $self->{'oauth'}->token_expire();
+
+        my $request = $self->_handle_api_method( $info, {} );
+        return $request;
+    };
+
+    return $iter;
 }
 
 ###########################################
@@ -1884,85 +2235,49 @@ sub _path_resolve {
 
 # TODO: Placed here until I have a use for it
 #my %IMPORT_FORMATS = (
-#    'application/x-vnd.oasis.opendocument.presentation'                         => ['application/vnd.google-apps.presentation'],
-#    'text/tab-separated-values'                                                 => ['application/vnd.google-apps.spreadsheet'],
-#    'image/jpeg'                                                                => ['application/vnd.google-apps.document'],
-#    'image/bmp'                                                                 => ['application/vnd.google-apps.document'],
-#    'image/gif'                                                                 => ['application/vnd.google-apps.document'],
-#    'application/vnd.ms-excel.sheet.macroenabled.12'                            => ['application/vnd.google-apps.spreadsheet'],
-#    'application/vnd.openxmlformats-officedocument.wordprocessingml.template'   => ['application/vnd.google-apps.document'],
-#    'application/vnd.ms-powerpoint.presentation.macroenabled.12'                => ['application/vnd.google-apps.presentation'],
-#    'application/vnd.ms-word.template.macroenabled.12'                          => ['application/vnd.google-apps.document'],
-#    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'   => ['application/vnd.google-apps.document'],
-#    'image/pjpeg'                                                               => ['application/vnd.google-apps.document'],
-#    'application/vnd.google-apps.script+text/plain'                             => ['application/vnd.google-apps.script'],
-#    'application/vnd.ms-excel'                                                  => ['application/vnd.google-apps.spreadsheet'],
-#    'application/vnd.sun.xml.writer'                                            => ['application/vnd.google-apps.document'],
-#    'application/vnd.ms-word.document.macroenabled.12'                          => ['application/vnd.google-apps.document'],
-#    'application/vnd.ms-powerpoint.slideshow.macroenabled.12'                   => ['application/vnd.google-apps.presentation'],
-#    'text/rtf'                                                                  => ['application/vnd.google-apps.document'],
-#    'application/vnd.oasis.opendocument.spreadsheet'                            => ['application/vnd.google-apps.spreadsheet'],
-#    'text/plain'                                                                => ['application/vnd.google-apps.document'],
-#    'application/x-vnd.oasis.opendocument.spreadsheet'                          => ['application/vnd.google-apps.spreadsheet'],
-#    'application/x-vnd.oasis.opendocument.text'                                 => ['application/vnd.google-apps.document'],
-#    'image/png'                                                                 => ['application/vnd.google-apps.document'],
-#    'application/msword'                                                        => ['application/vnd.google-apps.document'],
-#    'application/pdf'                                                           => ['application/vnd.google-apps.document'],
-#    'application/x-msmetafile'                                                  => ['application/vnd.google-apps.drawing'],
-#    'application/vnd.openxmlformats-officedocument.spreadsheetml.template'      => ['application/vnd.google-apps.spreadsheet'],
-#    'application/vnd.ms-powerpoint'                                             => ['application/vnd.google-apps.presentation'],
-#    'application/vnd.ms-excel.template.macroenabled.12'                         => ['application/vnd.google-apps.spreadsheet'],
-#    'image/x-bmp'                                                               => ['application/vnd.google-apps.document'],
-#    'application/rtf'                                                           => ['application/vnd.google-apps.document'],
-#    'application/vnd.openxmlformats-officedocument.presentationml.template'     => ['application/vnd.google-apps.presentation'],
-#    'image/x-png'                                                               => ['application/vnd.google-apps.document'],
-#    'text/html'                                                                 => ['application/vnd.google-apps.document'],
-#    'application/vnd.oasis.opendocument.text'                                   => ['application/vnd.google-apps.document'],
-#    'application/vnd.openxmlformats-officedocument.presentationml.presentation' => ['application/vnd.google-apps.presentation'],
-#    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'         => ['application/vnd.google-apps.spreadsheet'],
-#    'application/vnd.google-apps.script+json'                                   => ['application/vnd.google-apps.script'],
-#    'application/vnd.openxmlformats-officedocument.presentationml.slideshow'    => ['application/vnd.google-apps.presentation'],
-#    'application/vnd.ms-powerpoint.template.macroenabled.12'                    => ['application/vnd.google-apps.presentation'],
-#    'text/csv'                                                                  => ['application/vnd.google-apps.spreadsheet'],
-#    'application/vnd.oasis.opendocument.presentation'                           => ['application/vnd.google-apps.presentation'],
-#    'image/jpg'                                                                 => ['application/vnd.google-apps.document'],
-#    'text/richtext'                                                             => ['application/vnd.google-apps.document']
-#);
-#
-#my @ERXPORT_FORMATS = (
-#    'application/vnd.google-apps.document' => [
-#        'application/rtf',
-#        'application/vnd.oasis.opendocument.text',
-#        'text/html',
-#        'application/pdf',
-#        'application/epub+zip',
-#        'application/zip',
-#        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-#        'text/plain'
-#    ],
-#
-#    'application/vnd.google-apps.spreadsheet' => [
-#        'application/x-vnd.oasis.opendocument.spreadsheet',
-#        'text/tab-separated-values',
-#        'application/pdf',
-#        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-#        'text/csv',
-#        'application/zip',
-#        'application/vnd.oasis.opendocument.spreadsheet'
-#    ],
-#
-#    'application/vnd.google-apps.jam'        => ['application/pdf'],
-#        'application/vnd.google-apps.script' => ['application/vnd.google-apps.script+json'],
-#
-#    'application/vnd.google-apps.presentation' => [
-#        'application/vnd.oasis.opendocument.presentation',
-#        'application/pdf',
-#        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-#        'text/plain'
-#    ],
-#    'application/vnd.google-apps.form'    => ['application/zip'],
-#    'application/vnd.google-apps.drawing' => [ 'image/svg+xml', 'image/png', 'application/pdf', 'image/jpeg' ],
-#    'application/vnd.google-apps.site'    => ['text/plain']
+#    'application/x-vnd.oasis.opendocument.presentation'                         => 'application/vnd.google-apps.presentation',
+#    'text/tab-separated-values'                                                 => 'application/vnd.google-apps.spreadsheet',
+#    'image/jpeg'                                                                => 'application/vnd.google-apps.document',
+#    'image/bmp'                                                                 => 'application/vnd.google-apps.document',
+#    'image/gif'                                                                 => 'application/vnd.google-apps.document',
+#    'application/vnd.ms-excel.sheet.macroenabled.12'                            => 'application/vnd.google-apps.spreadsheet',
+#    'application/vnd.openxmlformats-officedocument.wordprocessingml.template'   => 'application/vnd.google-apps.document',
+#    'application/vnd.ms-powerpoint.presentation.macroenabled.12'                => 'application/vnd.google-apps.presentation',
+#    'application/vnd.ms-word.template.macroenabled.12'                          => 'application/vnd.google-apps.document',
+#    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'   => 'application/vnd.google-apps.document',
+#    'image/pjpeg'                                                               => 'application/vnd.google-apps.document',
+#    'application/vnd.google-apps.script+text/plain'                             => 'application/vnd.google-apps.script',
+#    'application/vnd.ms-excel'                                                  => 'application/vnd.google-apps.spreadsheet',
+#    'application/vnd.sun.xml.writer'                                            => 'application/vnd.google-apps.document',
+#    'application/vnd.ms-word.document.macroenabled.12'                          => 'application/vnd.google-apps.document',
+#    'application/vnd.ms-powerpoint.slideshow.macroenabled.12'                   => 'application/vnd.google-apps.presentation',
+#    'text/rtf'                                                                  => 'application/vnd.google-apps.document',
+#    'application/vnd.oasis.opendocument.spreadsheet'                            => 'application/vnd.google-apps.spreadsheet',
+#    'text/plain'                                                                => 'application/vnd.google-apps.document',
+#    'application/x-vnd.oasis.opendocument.spreadsheet'                          => 'application/vnd.google-apps.spreadsheet',
+#    'application/x-vnd.oasis.opendocument.text'                                 => 'application/vnd.google-apps.document',
+#    'image/png'                                                                 => 'application/vnd.google-apps.document',
+#    'application/msword'                                                        => 'application/vnd.google-apps.document',
+#    'application/pdf'                                                           => 'application/vnd.google-apps.document',
+#    'application/x-msmetafile'                                                  => 'application/vnd.google-apps.drawing',
+#    'application/vnd.openxmlformats-officedocument.spreadsheetml.template'      => 'application/vnd.google-apps.spreadsheet',
+#    'application/vnd.ms-powerpoint'                                             => 'application/vnd.google-apps.presentation',
+#    'application/vnd.ms-excel.template.macroenabled.12'                         => 'application/vnd.google-apps.spreadsheet',
+#    'image/x-bmp'                                                               => 'application/vnd.google-apps.document',
+#    'application/rtf'                                                           => 'application/vnd.google-apps.document',
+#    'application/vnd.openxmlformats-officedocument.presentationml.template'     => 'application/vnd.google-apps.presentation',
+#    'image/x-png'                                                               => 'application/vnd.google-apps.document',
+#    'text/html'                                                                 => 'application/vnd.google-apps.document',
+#    'application/vnd.oasis.opendocument.text'                                   => 'application/vnd.google-apps.document',
+#    'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'application/vnd.google-apps.presentation',
+#    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'         => 'application/vnd.google-apps.spreadsheet',
+#    'application/vnd.google-apps.script+json'                                   => 'application/vnd.google-apps.script',
+#    'application/vnd.openxmlformats-officedocument.presentationml.slideshow'    => 'application/vnd.google-apps.presentation',
+#    'application/vnd.ms-powerpoint.template.macroenabled.12'                    => 'application/vnd.google-apps.presentation',
+#    'text/csv'                                                                  => 'application/vnd.google-apps.spreadsheet',
+#    'application/vnd.oasis.opendocument.presentation'                           => 'application/vnd.google-apps.presentation',
+#    'image/jpg'                                                                 => 'application/vnd.google-apps.document',
+#    'text/richtext'                                                             => 'application/vnd.google-apps.document']
 #);
 
 1;
@@ -1983,6 +2298,8 @@ __END__
 
 This is a complete implementation of the Google Drive API V3. You can
 use all the documented methods below.
+
+Uploading files over 5MB require reading the B<UPLOADING> section below.
 
 =head1 METHODS
 
@@ -2011,6 +2328,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/about/get>.
 
     my $data = $gd->getStartPageToken({%params});
 
+Parameters are optional.
+
 This serves the path to C</changes/startPageToken>.
 
 This is also known as C<changes_getStartPageToken>.
@@ -2032,6 +2351,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/changes/list>.
 =head2 C<watch_changes>
 
     my $data = $gd->watch_changes({%params});
+
+Parameters are optional.
 
 This serves the path to C</changes/watch>.
 
@@ -2125,10 +2446,16 @@ This serves the path to C</files>.
 
 This is also known as C<files.create>.
 
-This one is for creating metadata for a file.
-
 You can read about the parameters on the Google Drive
 L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
+
+This one is B<ONLY for creating metadata for a file>. It will not upload
+any content. If you want to set content, use the following methods below:
+C<upload_media_file()>, C<upload_multipart_file>,
+C<create_resumable_upload()>, C<upload_file_content_single()>,
+C<upload_file_content_multiple()>, and C<upload_file_content_iterator>.
+
+Read more about uploading under B<UPLOADING> below.
 
 =head2 C<upload_media_file>
 
@@ -2140,16 +2467,17 @@ This serves the path to C</files>.
 
 This is also known as C<files.create>.
 
-This one is for uploading a file, even though it shares a moniker with the
-C<create_file()> method in the Google Drive API. There is a limitation of 5MB
-for the file.
-
 You can read about the parameters on the Google Drive
 L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
 
-=head2 C<upload_multimedia_file>
+This one is for uploading a file B<without metadata>. File size limitation
+is 5MB and we read it 4K at a time.
 
-    my $file = $gd->upload_multimedia_file( $filename, {%params} );
+Read more about uploading under B<UPLOADING> below.
+
+=head2 C<upload_multipart_file>
+
+    my $file = $gd->upload_multipart_file( $filename, {%params} );
 
 Parameters are optional.
 
@@ -2157,16 +2485,132 @@ This serves the path to C</files>.
 
 This is also known as C<files.create>.
 
-This one is for uploading a file, even though it shares a moniker with the
-C<create_file()> method in the Google Drive API. There is a limitation of 5MB
-for the file.
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
+
+This one is for uploading B<both a file and its metadata>. File size limitation
+is 5MB and we read the entire file into memory at once before uploading.
+
+Read more about uploading under B<UPLOADING> below.
+
+=head2 C<create_resumable_upload_for>
+
+    my $upload_id = $gd->upload_multimedia_file( $filename, {%params} );
+
+Parameters are optional.
+
+This serves the path to C</files>.
+
+This is also known as C<files.create>.
 
 You can read about the parameters on the Google Drive
 L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
 
+This method starts a resumable upload for a specific file on disk. It provides
+you with an ID that you can then feed to the following methods:
+C<upload_file_content_single()>, C<upload_file_content_multiple()>, and
+C<upload_file_content_iterator()>.
+
+File size limitation for any resumable upload is 5120GB and
+C<create_resumable_upload_for()> checks for this limit.
+
+Read more about uploading under B<UPLOADING> below.
+
+=head2 C<create_resumable_upload>
+
+    my $upload_id = $gd->create_resumable_upload( {%params} );
+
+Parameters are optional.
+
+This serves the path to C</files>.
+
+This is also known as C<files.create>.
+
+You can read about the parameters on the Google Drive
+L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
+
+This method starts a resumable upload. It provides you with an ID that you can
+then feed to the following methods: C<upload_file_content_single()>,
+C<upload_file_content_multiple()>, and C<upload_file_content_iterator()>.
+
+File size limitation for any resumable upload is 5120GB and
+C<create_resumable_upload_for()> checks for this limit.
+
+Read more about uploading under B<UPLOADING> below.
+
+=head2 C<upload_file_content_single>
+
+    my $result = $gd->upload_file_content_single( $upload_uri, $filename );
+
+This serves the path to the upload URI you provide it.
+
+There is a limitation of 5120GB for the file. With this method, we feed the
+file 4K at a time.
+
+Read more about uploading under B<UPLOADING>.
+
+=head2 C<upload_file_content_multiple>
+
+    my $result = $gd->upload_file_content_multiple( $upload_uri, $file, $chunk_size );
+
+Chunk size is optional, defaults to 10MB.
+
+This serves the path to the upload URI you provide it.
+
+There is a limitation of 5120GB for the file. With this method, we feed the
+file in chunks defined by the chunk size you provide or the default 10MB.
+
+Read more about uploading under B<UPLOADING>.
+
+The difference between C<upload_file_content_single()> and
+C<upload_file_content_multiple()> is that this variation will work better
+for long files, in theory. More importantly, it uses
+C<upload_file_content_iterator()> which really allows you to control matters.
+
+=head2 C<upload_file_content_iterator>
+
+    use JSON qw< from_json >;
+
+    my $iter_cb = $gd->upload_file_content_iterator( $filename, $file, $chunk_size );
+
+    while ( my $request = $iter->() ) {
+        my $response = handle_http_request($request);
+        # anything else - we're confused, so it's an error no matter what
+
+        # 200 - Done!
+        if ( $response->code() == 200 ) {
+            return from_json( $response->decoded_content() );
+        }
+
+        # 308 - Continue uploading!
+        # anything else - not what we're expecting
+        if ( $response->code() != 308 ) {
+            die "Error: " . $response->code();
+        }
+    }
+
+
+Chunk size is optional, defaults to 10MB.
+
+This returns a callback that allows you to control how to handle the
+uploading. It's especially valuable when you want to connect the uploading
+to an event loop like L<IO::Async>, L<POE>, L<AnyEvent>, or others.
+
+The callback returns an object of L<HTTP::Request> which represent the
+request that needs to be done. Once requested, if you receive a 308, it
+means you can continue, and if you receive a 200, it means you are done
+uploading.
+
+There is a limitation of 5120GB for the file. With this method, we feed the
+file in chunks defined by the chunk size you provide or the default 10MB.
+
+Read more about uploading under B<UPLOADING>.
+
 =head2 C<delete_file>
 
     $gd->delete_file( $fileId, {%params} );
+
+Parameters are optional.
 
 This serves the path to C</files/$fileId>.
 
@@ -2190,6 +2634,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/files/export>.
 
     my $data = $gd->generateIds({%params});
 
+Parameters are optional.
+
 This serves the path to C</files/generateIds>.
 
 This is also known as C<files.generateIds>.
@@ -2201,6 +2647,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/files/generateId
 
     my $file = $gd->get_file( $fileId, {%params} );
 
+Parameters are optional.
+
 This serves the path to C</files/$fileId>.
 
 This is also known as C<files.get>.
@@ -2211,6 +2659,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/files/get>.
 =head2 C<files>
 
     my $files = $gd->files({%params});
+
+Parameters are optional.
 
 This serves the path to C</files>.
 
@@ -2261,6 +2711,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/files/watch>.
 
     $gd->empty_trash({%params})
 
+Parameters are optional.
+
 This serves the path to C</files/trash>.
 
 This is also known as C<files.emptyTrash>.
@@ -2283,6 +2735,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/permissions/crea
 
     $gd->delete_permission( $fileId, $permissionId, {%params} );
 
+Parameters are optional.
+
 This serves the path to C</files/$fileId/permissions/$permissionId>.
 
 This is also known as C<permissions.delete>.
@@ -2293,6 +2747,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/permissions/dele
 =head2 C<get_permission>
 
     my $permission = $gd->get_permission( $fileId, $permissionId, {%params} );
+
+Parameters are optional.
 
 This serves the path to C</files/$fileId/permissions/$permissionId>.
 
@@ -2305,6 +2761,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/permissions/get>
 
     my $permissions = $gd->permissions( $fileId, {%params} );
 
+Parameters are optional.
+
 This serves the path to C</files/$fileId/permissions>.
 
 This is also known as C<permissions.list>.
@@ -2315,6 +2773,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/permissions/list
 =head2 C<update_permission>
 
     my $permission = $gd->update_permission( $fileId, $permissionId, {%params} );
+
+Parameters are optional.
 
 This serves the path to C</files/$fileId/permissions/$permissionId>.
 
@@ -2393,6 +2853,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/revisions/delete
 
     my $revision = $gd->get_revision( $fileId, $revisionId, {%params} );
 
+Parameters are optional.
+
 This serves the path to C</files/$fileId/revisions/$revisionId>.
 
 This is also known as C<revisions.get>.
@@ -2403,6 +2865,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/revisions/get>.
 =head2 C<revisions>
 
     my $revisions = $gd->revisions( $fileId, {%params} );
+
+Parameters are optional.
 
 This serves the path to C</files/$fileId/revisions>.
 
@@ -2448,6 +2912,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/drives/delete>.
 
     my $drive = $gd->get_drive( $driveId, {%params} );
 
+Parameters are optional.
+
 This serves the path to C</drives/$driveId>.
 
 This is also known as C<drives.get>.
@@ -2469,6 +2935,8 @@ L<API page|https://developers.google.com/drive/api/v3/reference/drives/hide>.
 =head2 C<drives>
 
     my $drives = $gd->drives({%params});
+
+Parameters are optional.
 
 This serves the path to C</drives>.
 
@@ -2501,7 +2969,9 @@ L<API page|https://developers.google.com/drive/api/v3/reference/drives/update>.
 
 =head2 C<children>
 
-    my $children = $gd->children( "/path/to" )>
+    my $children = $gd->children( '/path/to', {%params}, {%extra_params} )>
+
+The parameters and extra parameters are both optional.
 
 Return the entries under a given path on the Google Drive as a reference
 to an array. Each entry
@@ -2558,6 +3028,111 @@ search. Only one option is supported: C<auto_paging>.
 When C<auto_paging> is turned on (which is the default), the search
 will be done on every page of the results instead of stopping at the
 first page.
+
+=head1 UPLOADING
+
+Uploading of a 5MB file or lower is simple, but uploading a larger
+file is more difficult. This module supports every possible option,
+including connecting uploads to a different systems.
+
+=head2 UPLOADING FILES 5MB OR SMALLER
+
+When uploading 5MB and under, you can either use C<create_file()
+for metadata or C<upload_media_file()> for both metadata and content.
+
+Despite the name, you may upload any form of file, not just media
+files. (This is the name Google provides this form of upload.)
+
+    # Create only the metadata
+    my $data = $gd->create_file({
+        'name'      => 'foo.txt',
+        'mediaType' => 'text/plain',
+    })
+
+Once you call C<create_file()>, you can use the ID of the response
+in subsequent calls to C<upload_media_file()> or
+C<upload_multipart_file()>. (This might work for resumable uploads
+too, but it's not tested.)
+
+    # Upload just the file
+    $data = $gd->upload_media_file('foo.txt');
+    $data = $gd->upload_media_file( 'foo.txt', { 'name' => 'bar.txt' } );
+
+The only supported parameters are the query parameters.
+
+    # Upload the file and all the metadata
+    $data = $gd->upload_multipart_file( 'foo.txt', {...} );
+
+The difference between C<upload_media_file()> and
+C<upload_multipart_file()> is that the former method allows the query
+parameters, but the latter method allows all options.
+
+You can read more about the available options for either of these
+file uploads
+L<here|https://developers.google.com/drive/api/v3/reference/files/create>.
+
+=head2 UPLOADING FILES ABOVE 5MB
+
+When uploading files above 5MB, you must first create a URI for the
+file upload and then upload to that URI with another method.
+
+There are two ways to create it, depending on whether you have a file
+available on disk or not.
+
+    # Creating the URI using a file
+    my $upload_uri = $gd->create_resumable_upload_for( $file, {...} );
+
+    # Creating the URI without a file
+    my $upload_uri = $gd->create_resumable_upload({
+        'name'     => 'foo.txt',
+        'mimeType' => 'text/plain',
+    });
+
+The benefit of using C<create_resumable_upload_for()> is that it allows
+you to use an existing file's mime type and filename. Otherwise, if you
+use the low-level C<create_resumable_upload()>, you will need to provide
+the C<name> and C<mediaType> parameters yourself.
+
+There are three different methods for uploading - choose the one that
+suits you best.
+
+    # Just upload the entire file
+    my $data = upload_file_content_single( $upload_uri, $file );
+
+This upload will still try to chunk it by 4K so it doesn't load the
+entire file into memory. The biggest downside of this method is that
+if the file fails, it fully fails and you have to start from scratch.
+
+    # Upload the file in resumable chunks
+    my $data = upload_file_content_multiple(
+        $upload_uri, $file, $optional_chunk_size,
+    );
+
+This method will attempt to upload the file in chunks of 10MB (or a
+whatever chunk size you ask for - in bytes) until it successfully
+finishes. If it fails, you might be able to resume. However, resuming
+is not yet supported within the API, sorry.
+
+=head2 UPLOADING FILES WITH EVENT LOOPS
+
+If you want to connect file uploading to an event loop, you can use
+C<upload_file_content_iterator()> to receive an iterator which will
+generate a proper L<HTTP::Request> object you can then use in the
+event loop request.
+
+    my $iterator = upload_file_content_iterator(
+        $upload_uir, $file, $optional_chunk_size,
+    );
+
+    while ( my $request = $iter->() ) {
+        my $response = do_something_with_request($request);
+
+        # $response->code() == 200 - Done
+        # $response->code() == 308 - Keep going
+        # anything else            - Probably some form of error
+    }
+
+There is currently no sample code for any particular event loop.
 
 =head1 LEGALESE
 

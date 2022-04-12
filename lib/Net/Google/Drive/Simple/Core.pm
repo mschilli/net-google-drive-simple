@@ -20,6 +20,8 @@ use Net::Google::Drive::Simple::Item ();
 use JSON qw( from_json to_json );
 use Log::Log4perl qw(:easy);
 
+use constant { 'HTTP_CODE_RESUME' => 308 };
+
 our $VERSION = '3.01';
 
 ###########################################
@@ -134,7 +136,8 @@ sub http_loop {
 
         $resp = $ua->request($req);
 
-        if ( !$resp->is_success() && $resp->code() != 308 ) {
+        # We want to check for success but resume is not an error
+        if ( !$resp->is_success() && $resp->code() != HTTP_CODE_RESUME() ) {
             $self->error( $resp->message() );
             warn "Failed with ", $resp->code(), ": ", $resp->message(), "\n";
             if ( --$RETRIES >= 0 ) {
@@ -234,7 +237,7 @@ sub _make_request {
     my $res = $self->http_loop($req);
     if ( $res->is_error() ) {
         $self->error( $res->message() );
-        return $res;
+        return $should_return_res ? $res : ();
     }
 
     # were we asked to just return the response as is?

@@ -667,7 +667,6 @@ sub upload_media_file {
         or LOGDIE("upload_media_file() has a limit of 5M, '$file' is bigger");
 
     $options //= {};
-
     $options->{'uploadType'} = 'media';
 
     my $mimeType = delete $options->{'mimeType'} // $self->file_mime_type($file);
@@ -2609,7 +2608,6 @@ C<upload_file_content_iterator()> which really allows you to control matters.
             die "Error: " . $response->code();
         }
     }
-
 
 Chunk size is optional, defaults to 10 MB.
 

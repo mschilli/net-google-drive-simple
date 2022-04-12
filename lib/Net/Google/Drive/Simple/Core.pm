@@ -20,6 +20,12 @@ use Net::Google::Drive::Simple::Item ();
 use JSON qw( from_json to_json );
 use Log::Log4perl qw(:easy);
 
+# used in V3.pm too
+use constant {
+    'HTTP_CODE_OK'     => 200,
+    'HTTP_CODE_RESUME' => 308,
+};
+
 our $VERSION = '3.01';
 
 ###########################################
@@ -134,7 +140,8 @@ sub http_loop {
 
         $resp = $ua->request($req);
 
-        if ( !$resp->is_success() ) {
+        # We want to check for success but resume is not an error
+        if ( !$resp->is_success() && $resp->code() != HTTP_CODE_RESUME() ) {
             $self->error( $resp->message() );
             warn "Failed with ", $resp->code(), ": ", $resp->message(), "\n";
             if ( --$RETRIES >= 0 ) {
@@ -172,7 +179,7 @@ sub _generate_request {
     if ( $info->{'body_parameters'} ) {
         $post_data = to_json( $info->{'body_parameters'} );
 
-        if ( !$info->{'multipart'} ) {
+        if ( !$info->{'multipart'} && !$info->{'resumable'} ) {
             push @headers, 'Content-Type', 'application/json';
         }
     }
@@ -229,16 +236,20 @@ sub _generate_request {
 ###########################################
 sub _make_request {
 ###########################################
-    my ( $self, $req ) = @_;
+    my ( $self, $req, $should_return_res ) = @_;
 
-    my $resp = $self->http_loop($req);
-    if ( $resp->is_error() ) {
-        $self->error( $resp->message() );
-        return;
+    my $res = $self->http_loop($req);
+    if ( $res->is_error() ) {
+        $self->error( $res->message() );
+        return $should_return_res ? $res : ();
     }
 
+    # were we asked to just return the response as is?
+    $should_return_res
+        and return $res;
+
     # v3 returns 204 on DELETE for no content
-    my $data = $resp->code() == 204 ? {} : from_json( $resp->content() );
+    my $data = $res->code() == 204 ? {} : from_json( $res->content() );
     return $data;
 }
 

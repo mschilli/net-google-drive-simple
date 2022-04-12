@@ -19,9 +19,6 @@ use constant {
     'HTTP_METHOD_PATCH'  => 'PATCH',
     'HTTP_METHOD_DELETE' => 'DELETE',
 
-    'HTTP_CODE_OK'     => 200,
-    'HTTP_CODE_RESUME' => 308,
-
     'TYPE_STRING'  => 'string',
     'TYPE_INTEGER' => 'integer',
     'TYPE_LONG'    => 'long',
@@ -970,7 +967,7 @@ sub upload_file_content_single {
     defined $upload_uri && length $upload_uri
         or LOGDIE('upload_file_content_single() missing upload_uri');
 
-    $upload_uri =~ m{^https://.*upload_id=.+}xms
+    $upload_uri =~ m{^https://.*\bupload_id=.+}xmsi
         or LOGDIE('upload_file_content_single() upload_uri seems malformed');
 
     defined $file && length $file
@@ -1035,11 +1032,11 @@ sub upload_file_content_multiple {
         # 308           - means continue
         # anything else - we're confused, so it's an error no matter what
 
-        if ( $response->code() == HTTP_CODE_OK() ) {
+        if ( $response->code() == Net::Google::Drive::Simple::Core::HTTP_CODE_OK() ) {
             return from_json( $response->decoded_content() );
         }
 
-        if ( $response->code() != HTTP_CODE_RESUME() ) {
+        if ( $response->code() != Net::Google::Drive::Simple::Core::HTTP_CODE_RESUME() ) {
             LOGDIE( "Triggered error: " . $response->code() );
         }
     }

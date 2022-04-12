@@ -20,7 +20,11 @@ use Net::Google::Drive::Simple::Item ();
 use JSON qw( from_json to_json );
 use Log::Log4perl qw(:easy);
 
-use constant { 'HTTP_CODE_RESUME' => 308 };
+# used in V3.pm too
+use constant {
+    'HTTP_CODE_OK'     => 200,
+    'HTTP_CODE_RESUME' => 308,
+};
 
 our $VERSION = '3.01';
 

@@ -3070,7 +3070,7 @@ However, this has no size limitations other than 5120 GB.
 
 =head2 UPLOADING FILES 5 MB OR SMALLER
 
-When uploading 5 MB and under, you can either use C<create_file()
+When uploading 5 MB and under, you can either use C<create_file()>
 for metadata or C<upload_media_file()> for both metadata and content.
 
 Despite the name, you may upload any form of file, not just media

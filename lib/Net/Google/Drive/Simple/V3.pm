@@ -34,7 +34,7 @@ use constant {
     'SIZE_5120GB' => 5_497_558_138_880 # high limit
 };
 
-use constant { 'DEF_CHUNK_SIZE' => SIZE_5MB() * 2 }; # 10MB
+use constant { 'DEF_CHUNK_SIZE' => SIZE_5MB() * 2 }; # 10 MB
 
 our $VERSION = '3.01';
 
@@ -1019,7 +1019,7 @@ sub upload_file_content_multiple {
     $size <= SIZE_5120GB()
         or LOGDIE("upload_file_content_multiple() has a limit of 5120G, '$file' is bigger");
 
-    # By upload in 10MB chunks
+    # By upload in 10 MB chunks
     # But you can provide the amount of bytes instead
     $chunk_size //= DEF_CHUNK_SIZE();
 
@@ -1069,7 +1069,7 @@ sub upload_file_content_iterator {
     $size <= SIZE_5120GB()
         or LOGDIE("upload_file_content_multiple() has a limit of 5120G, '$file' is bigger");
 
-    # By upload in 10MB chunks
+    # By upload in 10 MB chunks
     # But you can provide the amount of bytes instead
     $chunk_size //= DEF_CHUNK_SIZE();
 
@@ -1129,6 +1129,14 @@ sub upload_file_content_iterator {
     };
 
     return $iter;
+}
+
+###########################################
+sub upload_file {
+###########################################
+    my ( $self, $file, $options ) = @_;
+    my $upload_uri = $self->create_resumable_upload_for( $file, $options );
+    return $self->upload_file_content_single( $upload_uri, $file );
 }
 
 ###########################################
@@ -2299,7 +2307,7 @@ __END__
 This is a complete implementation of the Google Drive API V3. You can
 use all the documented methods below.
 
-Uploading files over 5MB require reading the B<UPLOADING> section below.
+Uploading files over 5 MB require reading the B<UPLOADING> section below.
 
 =head1 METHODS
 
@@ -2455,6 +2463,19 @@ C<upload_media_file()>, C<upload_multipart_file>,
 C<create_resumable_upload()>, C<upload_file_content_single()>,
 C<upload_file_content_multiple()>, and C<upload_file_content_iterator>.
 
+Read more about uploading under B<UPLOADING> below. If you want a simple way
+to upload files, check C<upload_file()>.
+
+=head2 C<upload_file>
+
+    my $result = $gd->upload_file( $filename, {%params} );
+
+Parameters are optional.
+
+This method combines the different mechanisms for uploading a file and makes
+it easy to upload large files. There are disadvantages, but for most cases,
+this method should serve you well.
+
 Read more about uploading under B<UPLOADING> below.
 
 =head2 C<upload_media_file>
@@ -2471,7 +2492,7 @@ You can read about the parameters on the Google Drive
 L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
 
 This one is for uploading a file B<without metadata>. File size limitation
-is 5MB and we read it 4K at a time.
+is 5 MB and we read it 4K at a time.
 
 Read more about uploading under B<UPLOADING> below.
 
@@ -2489,7 +2510,7 @@ You can read about the parameters on the Google Drive
 L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
 
 This one is for uploading B<both a file and its metadata>. File size limitation
-is 5MB and we read the entire file into memory at once before uploading.
+is 5 MB and we read the entire file into memory at once before uploading.
 
 Read more about uploading under B<UPLOADING> below.
 
@@ -2511,7 +2532,7 @@ you with an ID that you can then feed to the following methods:
 C<upload_file_content_single()>, C<upload_file_content_multiple()>, and
 C<upload_file_content_iterator()>.
 
-File size limitation for any resumable upload is 5120GB and
+File size limitation for any resumable upload is 5120 GB and
 C<create_resumable_upload_for()> checks for this limit.
 
 Read more about uploading under B<UPLOADING> below.
@@ -2533,7 +2554,7 @@ This method starts a resumable upload. It provides you with an ID that you can
 then feed to the following methods: C<upload_file_content_single()>,
 C<upload_file_content_multiple()>, and C<upload_file_content_iterator()>.
 
-File size limitation for any resumable upload is 5120GB and
+File size limitation for any resumable upload is 5120 GB and
 C<create_resumable_upload_for()> checks for this limit.
 
 Read more about uploading under B<UPLOADING> below.
@@ -2544,7 +2565,7 @@ Read more about uploading under B<UPLOADING> below.
 
 This serves the path to the upload URI you provide it.
 
-There is a limitation of 5120GB for the file. With this method, we feed the
+There is a limitation of 5120 GB for the file. With this method, we feed the
 file 4K at a time.
 
 Read more about uploading under B<UPLOADING>.
@@ -2553,12 +2574,12 @@ Read more about uploading under B<UPLOADING>.
 
     my $result = $gd->upload_file_content_multiple( $upload_uri, $file, $chunk_size );
 
-Chunk size is optional, defaults to 10MB.
+Chunk size is optional, defaults to 10 MB.
 
 This serves the path to the upload URI you provide it.
 
-There is a limitation of 5120GB for the file. With this method, we feed the
-file in chunks defined by the chunk size you provide or the default 10MB.
+There is a limitation of 5120 GB for the file. With this method, we feed the
+file in chunks defined by the chunk size you provide or the default 10 MB.
 
 Read more about uploading under B<UPLOADING>.
 
@@ -2590,7 +2611,7 @@ C<upload_file_content_iterator()> which really allows you to control matters.
     }
 
 
-Chunk size is optional, defaults to 10MB.
+Chunk size is optional, defaults to 10 MB.
 
 This returns a callback that allows you to control how to handle the
 uploading. It's especially valuable when you want to connect the uploading
@@ -2601,8 +2622,8 @@ request that needs to be done. Once requested, if you receive a 308, it
 means you can continue, and if you receive a 200, it means you are done
 uploading.
 
-There is a limitation of 5120GB for the file. With this method, we feed the
-file in chunks defined by the chunk size you provide or the default 10MB.
+There is a limitation of 5120 GB for the file. With this method, we feed the
+file in chunks defined by the chunk size you provide or the default 10 MB.
 
 Read more about uploading under B<UPLOADING>.
 
@@ -3031,13 +3052,30 @@ first page.
 
 =head1 UPLOADING
 
-Uploading of a 5MB file or lower is simple, but uploading a larger
+Uploading of a 5 MB file or lower is simple, but uploading a larger
 file is more difficult. This module supports every possible option,
 including connecting uploads to a different systems.
 
-=head2 UPLOADING FILES 5MB OR SMALLER
+=head2 SIMPLE AND EASY UPLOADING
 
-When uploading 5MB and under, you can either use C<create_file()
+If you are not interested in all the details and finer controls of
+uploading files, you can just use C<upload_file>.
+
+    my $data = $gd->upload_file( $filename, {%params} );
+
+The parameters are optional and you can read more about them in
+the appropriate
+L<API page|https://developers.google.com/drive/api/v3/reference/files/create>.
+
+The disadvantages are that you cannot control how much is uploaded
+at a time, it's not resumable, nor coudl you connect it with an
+event loop.
+
+However, this has no size limitations other than 5120 GB.
+
+=head2 UPLOADING FILES 5 MB OR SMALLER
+
+When uploading 5 MB and under, you can either use C<create_file()
 for metadata or C<upload_media_file()> for both metadata and content.
 
 Despite the name, you may upload any form of file, not just media
@@ -3071,9 +3109,9 @@ You can read more about the available options for either of these
 file uploads
 L<here|https://developers.google.com/drive/api/v3/reference/files/create>.
 
-=head2 UPLOADING FILES ABOVE 5MB
+=head2 UPLOADING FILES ABOVE 5 MB
 
-When uploading files above 5MB, you must first create a URI for the
+When uploading files above 5 MB, you must first create a URI for the
 file upload and then upload to that URI with another method.
 
 There are two ways to create it, depending on whether you have a file
@@ -3108,7 +3146,7 @@ if the file fails, it fully fails and you have to start from scratch.
         $upload_uri, $file, $optional_chunk_size,
     );
 
-This method will attempt to upload the file in chunks of 10MB (or a
+This method will attempt to upload the file in chunks of 10 MB (or a
 whatever chunk size you ask for - in bytes) until it successfully
 finishes. If it fails, you might be able to resume. However, resuming
 is not yet supported within the API, sorry.

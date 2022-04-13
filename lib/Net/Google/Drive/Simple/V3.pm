@@ -2099,7 +2099,7 @@ sub children {
     $opts->{'maxResults'}
         and LOGDIE("'maxResults' not supported, use 'pagesize' instead");
 
-    my ( $folder_id, $parent ) = $self->_path_resolve( $path, $search_opts );
+    my ( $folder_id, $parent ) = $self->_path_resolve( $path, $opts, $search_opts );
 
     return unless defined $folder_id;
 
@@ -2150,7 +2150,7 @@ sub children_by_folder_id {
     if ( $opts->{'fields'} ) {
         $opts->{'fields'} .= ',';
     }
-    $opts->{'fields'} .= 'files(id,kind,name,mimeType,originalFilename,trashed)';
+    $opts->{'fields'} .= 'files(id,kind,name,mimeType,parents,originalFilename,trashed)';
 
     # Find only those not in the trash
     # possibly go through all paged results
@@ -2185,8 +2185,9 @@ sub children_by_folder_id {
 ###########################################
 sub _path_resolve {
 ###########################################
-    my ( $self, $path, $search_opts ) = @_;
+    my ( $self, $path, $opts, $search_opts ) = @_;
 
+    $opts        = {} if !defined $opts;
     $search_opts = {} if !defined $search_opts;
 
     my @parts = grep length, split '/', $path;
@@ -2201,21 +2202,18 @@ sub _path_resolve {
 
         # We append to 'q' parameter in case the user provided it
         my $name = $part =~ s{\'}{\\\'}xmsgr;
-        if ( defined $search_opts->{'q'} && length $search_opts->{'q'} ) {
-            $search_opts->{'q'} .= ' AND ';
-        } else {
-            $search_opts->{'q'} = '';
-        }
-        $search_opts->{'q'} .= "name = '$name'";
 
-        my $children = $self->children_by_folder_id( $folder_id, {}, $search_opts )
-            or return;
+        my $children = $self->children_by_folder_id(
+            $folder_id,
+            {},
+            { %{$search_opts}, 'name' => $name },
+        ) or return;
 
         for my $child (@$children) {
             DEBUG("Found child: " . $child->name() );
 
             if ( $child->name() eq $part ) {
-                $folder_id = $child->{'id'};
+                $folder_id = $child->id();
                 unshift @ids, $folder_id;
                 $parent = $folder_id;
                 DEBUG("Parent: $parent");

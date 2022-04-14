@@ -593,6 +593,18 @@ sub copy_file {
     return $self->_handle_api_method( $info, $options );
 }
 
+# Helper
+###########################################
+sub create_folder {
+###########################################
+    my ( $self, $name, $parent_id ) = @_;
+    return $self->create_file({
+        'name'     => $name,
+        'mimeType' => "application/vnd.google-apps.folder",
+        'parents'  => [$parent_id],
+    });
+}
+
 # Metadata only
 ###########################################
 sub create_file {

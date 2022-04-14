@@ -598,6 +598,13 @@ sub copy_file {
 sub create_folder {
 ###########################################
     my ( $self, $name, $parent_id ) = @_;
+
+    defined $name && length $name
+        or LOGDIE('create_folder() missing name');
+
+    defined $parent_id && length $parent_id
+        or LOGDIE('create_folder() missing parent_id');
+
     return $self->create_file({
         'name'     => $name,
         'mimeType' => "application/vnd.google-apps.folder",

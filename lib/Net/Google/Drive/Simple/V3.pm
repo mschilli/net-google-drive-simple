@@ -33,7 +33,7 @@ use constant {
 
 use constant { 'DEF_CHUNK_SIZE' => SIZE_5MB() * 2 }; # 10 MB
 
-our $VERSION = '3.02';
+our $VERSION = '3.03';
 
 # TODO:
 # * requestId are random UUIDs that we should probably generate (drive_create)

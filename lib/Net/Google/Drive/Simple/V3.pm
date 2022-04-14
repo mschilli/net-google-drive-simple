@@ -1245,6 +1245,7 @@ sub get_file {
 
     my $info = {
         'query_parameters' => {
+            'alt'                       => [ TYPE_STRING(),  0 ],
             'acknowledgeAbuse'          => [ TYPE_BOOLEAN(), 0 ],
             'fields'                    => [ TYPE_STRING(),  0 ],
             'includePermissionsForView' => [ TYPE_STRING(),  0 ],
@@ -1252,12 +1253,26 @@ sub get_file {
             'supportsTeamDrives'        => [ TYPE_BOOLEAN(), 0 ],
         },
 
+        'parameter_checks' => {
+            'alt' => sub {
+                $_ eq 'media'
+                    or return 'must be: media';
+
+                return 0;
+            },
+        },
+
         'path'        => "files/$fileId",
         'method_name' => 'get_file',
         'http_method' => HTTP_METHOD_GET(),
     };
 
-    return $self->_handle_api_method( $info, $options );
+    if ( $options->{'alt'} eq 'media' ) {
+        $info->{'return_http_response'} = 1;
+    }
+
+    my $response = $self->_handle_api_method( $info, $options );
+    return $response->decoded_content();
 }
 
 ###########################################

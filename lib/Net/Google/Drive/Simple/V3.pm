@@ -2467,6 +2467,19 @@ This is also known as C<files.copy>.
 You can read about the parameters on the Google Drive
 L<API page|https://developers.google.com/drive/api/v3/reference/files/copy>.
 
+=head2 C<create_folder>
+
+    my $folder_data = $gd->create_folder( $name, $parent_id );
+    print $folder_data->{'id'};
+
+This method is just for convenience. It's effectively:
+
+        $self->create_file({
+            'name'     => $name,
+            'mimeType' => "application/vnd.google-apps.folder",
+            'parents'  => [$parent_id],
+        });
+
 =head2 C<create_file>
 
     my $file = $gd->create_file({%params});
@@ -2686,7 +2699,15 @@ L<API page|https://developers.google.com/drive/api/v3/reference/files/generateId
 
 =head2 C<get_file>
 
-    my $file = $gd->get_file( $fileId, {%params} );
+    my $file_metadata = $gd->get_file( $fileId, {%params} );
+
+    my $file_content = $gd->get_file(
+        $fileId,
+        {
+            'alt'              => 'media',      # get the content
+            'acknowledgeAbuse' => JSON::true(), # (optional) when there's risk
+        },
+    );
 
 Parameters are optional.
 

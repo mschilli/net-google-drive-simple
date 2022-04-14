@@ -3,6 +3,8 @@ Revision history for Perl extension Net::Google::Drive::Simple
 
 {{$NEXT}}
 
+3.02      2022-04-14
+
         Multiple small improvements and fixed for Google Drive v3 API
         * fix child search
         * provide 'create_folder' method
